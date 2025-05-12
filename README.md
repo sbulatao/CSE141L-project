@@ -1,7 +1,6 @@
 # CSE141L-project
-# Instruction Set Architecture (ISA) Documentation
+# ISA Documentation
 
-This document describes the instruction formats, corresponding operations, and operand usage for a custom instruction set architecture.
 
 ---
 
@@ -43,10 +42,10 @@ This document describes the instruction formats, corresponding operations, and o
 
 ## Internal Operands
 
-- **General Purpose Registers**: `r0` to `r7` (with `r0` hardwired to 0)
-- **Special Purpose Registers**:
-  - `acc` (Accumulator)
-  - `BranchFlag` (Used for conditional branching)
-  - `pc` (Program Counter)
+- **General Purpose Registers**: 8-bit `r0` to `r7` (with `r0` hardwired to 8'b0)
+- **Special Purpose Registers**: 
+  - 8-bit `acc` (Accumulator)
+  - 8-bit `BranchFlag` (Used for conditional branching)
+  - 8-bit `pc` (Program Counter)
 
 ---
