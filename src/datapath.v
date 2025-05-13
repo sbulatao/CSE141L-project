@@ -36,7 +36,7 @@ module datapath(
     wire [7:0]  result;
     wire BranchFlag_r;
 
-	dff #(.WIDTH(8)) dff_u (
+	my_dff #(.WIDTH(8)) dff_u (
 		.clk(clk),
 		.rst(rst),
 		.d(pcNext),
@@ -119,7 +119,7 @@ module datapath(
         .BranchFlag(BranchFlag_r)
     );
 
-    dff #(.WIDTH(1)) dff_Brc (
+    my_dff #(.WIDTH(1)) dff_Brc (
 		.clk(clk),
 		.rst(rst),
 		.d(BranchFlag_r),
