@@ -1,0 +1,5 @@
+ADD r1
+ADD r5
+EQ r2 r7
+EQ r0 r3
+ADDI 6
