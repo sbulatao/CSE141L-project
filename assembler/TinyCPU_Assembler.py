@@ -12,6 +12,10 @@ class Assembler:
             "r6": "110",
             "r7": "111",
         }
+        self.Acc = "00000000"  # accumulator
+        self.PC = 0  # program counter
+        self.memory = [0] * 8  # memory initialized to 0, size 8 bytes
+        self.BranchFlag = 0  # branch flag initialized to 0
  
     def encode(self, instruction):
 
@@ -24,7 +28,7 @@ class Assembler:
         elif "AND" in instruction:
             return self.encode_AND(instruction)
 
-        elif "OR" in instruction:
+        elif "OR" in instruction and "BOR" not in instruction:
             return self.encode_OR(instruction)   
 
         elif "BAN" in instruction:
@@ -69,10 +73,12 @@ class Assembler:
 # regular expression:
 # ^: begin; \s: space; \s*: repeated spaces; [a-z0-9]: means format like a0, a1, ..., z9; 
 # 0x: hex imm; [a-fA-F0-9]: hex imm like 01C, 4D2,... FFF; \d: decimal imm like 0, 5,..., 13; $: end;
- 
+    
+
     def encode_ADD(self, instruction):
         if not re.match(r'^ADD\s+r[0-7]$', instruction):   # a regular expression (ADD rs)
             raise ValueError(f"Syntax error in instruction: {instruction}")     
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])  # get the second token (rs)
@@ -80,12 +86,17 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000000"
-        return opcode+rs
-    
 
+        # Update Acc: Acc = Acc + rf[rs]
+        self.Acc = bin(int(self.Acc, 2) + int(rs, 2))[2:].zfill(8)  # Ensure 8-bit representation
+
+        return opcode+rs  # return encoding 
+
+    
     def encode_SUB(self, instruction):
         if not re.match(r'^SUB\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])  # get the second token (rs)
@@ -93,12 +104,17 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000001"
-        return opcode+rs
+
+        # Update Acc: Acc = Acc - rf[rs]
+        self.Acc = bin(int(self.Acc, 2) - int(rs, 2))[2:].zfill(8)  # Ensure 8-bit representation
+
+        return opcode+rs  # return encoding
 
 
     def encode_AND(self, instruction):
         if not re.match(r'^AND\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])  # get the second token (rs)
@@ -106,12 +122,17 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000010"
-        return opcode+rs
+
+        # Perform bitwise AND: Acc = Acc & rf[rs]
+        self.Acc = bin(int(self.Acc, 2) & int(rs, 2))[2:].zfill(8)  # ensure 8-bit representation
+
+        return opcode+rs  # return encoding
 
 
     def encode_OR(self, instruction):
         if not re.match(r'^OR\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])
@@ -119,35 +140,46 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000011"
-        return opcode+rs
+
+        # Perform bitwise OR: Acc = Acc | rf[rs]
+        self.Acc = bin(int(self.Acc, 2) | int(rs, 2))[2:].zfill(8)  # ensure 8-bit rep
+
+        return opcode+rs  # return encoding 
+
 
     def encode_BAN(self, instruction):
         if not re.match(r'^BAN\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
-        rs = self.registers.get(tokens[1])
-        if rs is None:
-            raise ValueError(f"Unknown register: {tokens[1]}")
-        
         opcode = "000101"
-        return opcode+rs
+        unusedBits = "000"  # 3 bits placeholder xxx
+
+        # Perform BAN operation: Acc = Acc (since Acc & Acc = Acc)
+        self.Acc = bin(int(self.Acc, 2))[2:].zfill(8)  # ensure 8-bit rep
+
+        return opcode+unusedBits  # return encoding
+
 
     def encode_BOR(self, instruction):
         if not re.match(r'^BOR\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
-        rs = self.registers.get(tokens[1])
-        if rs is None:
-            raise ValueError(f"Unknown register: {tokens[1]}")
-        
         opcode = "000110"
-        return opcode+rs
+        unusedBits = "000"  # Placeholder since xxx is unused
+
+        # Perform BOR operation: Acc = |Acc --> no actual changes OR-ing with itself
+        self.Acc = bin(int(self.Acc, 2))[2:].zfill(8)  # ensure 8-bit rep
+
+        return opcode+unusedBits  # return encoding
+
 
     def encode_LWR(self, instruction):
         if not re.match(r'^LWR\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])
@@ -155,11 +187,18 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "001000"
-        return opcode+rs
+        
+        # Load value from memory: Acc = MEM(rs)
+        memAddress = int(rs, 2)  # convert binary reg. addredss to integer index
+        self.Acc = bin(self.memory[memAddress])[2:].zfill(8)  # retrieve value from memory and format
+
+        return opcode+rs  # return encoding
+
 
     def encode_STR(self, instruction):
         if not re.match(r'^STR\s+r[0-7]$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
         rs = self.registers.get(tokens[1])
@@ -167,12 +206,18 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "001001"
-        return opcode+rs
+
+        # Store Acc into memory at rs location: MEM(rs) = Acc
+        memAddress = int(rs, 2)  # convert binary reg. address to integer index
+        self.memory[memAddress] = int(self.Acc, 2)  # store Acc in memory
+
+        return opcode+rs  # return encoding 
     
 
     def encode_ADDI(self, instruction):
         if not re.match(r'^ADDI\s+\d+$', instruction):   # a regular expression (ADDI imm)
             raise ValueError(f"Syntax error in instruction: {instruction}")     
+        
         tokens = instruction.split()    # splits the instruction string into a list, using spaces as the separator
         
         # get the second token (rt); 
@@ -181,70 +226,98 @@ class Assembler:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
         
         opcode = "010000"
-        return opcode+imm
+
+        # Perform addition: Acc = Acc + imm
+        self.Acc = bin(int(self.Acc, 2) + int(imm, 2))[2:].zfill(8)  # update Acc directly
+
+        return opcode+imm  # Return encoding 
     
 
     def encode_SUBI(self, instruction):
         if not re.match(r'^SUBI\s+\d+$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        # get the second token (rt);
         
         imm = bin(int(tokens[1]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
         if len(imm) > 3:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
         
         opcode = "010001"
-        return opcode+imm
+
+        # Perform subtraction: Acc = Acc - imm
+        self.Acc = bin(int(self.Acc, 2) - int(imm, 2))[2:].zfill(8)  # update Acc directly
+
+        return opcode+imm  # return encoding 
 
 
     def encode_LWI(self, instruction):
         if not re.match(r'^LWI\s+\d+$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        # get the second token (rt);
         
         imm = bin(int(tokens[1]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
         if len(imm) > 3:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
         
         opcode = "010010"
-        return opcode+imm
+
+        # Load immediate into Acc: Acc = imm
+        Acc = imm.zfill(8)  # ensure 8-bit rep
+
+        return opcode+imm  # return encoding
 
 
     def encode_BRC(self, instruction):
-        if not re.match(r'^BRC\s+\d+$', instruction):
+        # BranchFlag = 1 if rs == rt else 0
+        if not re.match(r'^BRC\s+\d$', instruction):   # a regular expression (BRC rs rt)
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
+        tokens = instruction.split()    # splits the instruction string into a list, using spaces as the separator
+        
+        imm = bin(int(tokens[1]))[2:].zfill(3)  # Convert immediate value to 3-bit binary
+        if len(imm) > 3:
+            raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
+
+        opcode = "010101"
+
+        # Update PC conditionally based on BranchFlag
+        if self.BranchFlag == 1:
+            self.PC += 1 + int(imm, 2)  # if flag is set, apply offset
+        else:
+            self.PC += 1  # Otherwise, proceed normally
+
+        return opcode+imm  # return encoding
+
+
+    def encode_SLL(self, instruction):
+        if not re.match(r'^SLL\s+\d$', instruction):
+            raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        # get the second token (rt);
         
         imm = bin(int(tokens[1]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
         if len(imm) > 3:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
-        opcode = "010101"
-        return opcode+imm
-
-
-    def encode_SLL(self, instruction):
-        if not re.match(r'^SLL\s+r[0-7]$', instruction):
-            raise ValueError(f"Syntax error in instruction: {instruction}")
-        tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        
-        rs = self.registers.get(tokens[1])
-        if rs is None:
-            raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "010111"
-        return opcode+rs
+
+        # Perform left shift: Acc = Acc << imm
+        self.Acc = bin(int(self.Acc, 2) << int(imm, 2))[2:].zfill(8)  # update Acc directly
+
+        return opcode+imm  # return encoding 
     
 
     def encode_EQ(self, instruction):
-        if not re.match(r'^EQ\s+r[0-7]\s+r[0-7]$', instruction):   # a regular expression (EQ rs rt)
-            raise ValueError(f"Syntax error in instruction: {instruction}")     
+        # BranchFlag = 1 if rs == rt else 0
+        if not re.match(r'^EQ\s+r[0-7]\s+r[0-7]$', instruction):
+            raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()    # splits the instruction string into a list, using spaces as the separator
         
         # get the second token (rs)
-        rs = self.registers.get(tokens[1])  
+        rs = self.registers.get(tokens[1])
         if rs is None:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
@@ -253,34 +326,58 @@ class Assembler:
         if rt is None:
             raise ValueError(f"Unknown register: {tokens[2]}")
         
-        opcode = "100000" # 100
-        return opcode+rs+rt
+        opcode = "100"
+
+        # Compare values stored in memory at rs and rt locations
+        if self.memory[int(rs, 2)] == self.memory[int(rt, 2)]: # Compare memory contents
+            self.BranchFlag = 1  # Set branch flag if registers match
+        else:
+            self.BranchFlag = 0  # Otherwise, reset branch flag
+
+        return opcode+rs+rt  # return encoding
     
 
     def encode_LWRI(self, instruction):
-        if not re.match(r'^LWRI\s+\d+$', instruction):
+        if not re.match(r'^LWRI\s+r[0-7]\s+\d+$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        # get the second token (rt);
-        imm = bin(int(tokens[1]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
+        
+        # get the second token (rs)
+        rs = self.registers.get(tokens[1])
+        if rs is None:
+            raise ValueError(f"Unknown register: {tokens[1]}")
+        
+        imm = bin(int(tokens[2]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
         if len(imm) > 3:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
-        opcode = "101000" # 101
-        return opcode+imm
+        
+        opcode = "101"
+
+         # Perform load immediate: rf[rs] = imm
+        self.registers[tokens[1]] = imm.zfill(8)  # ensure 8-bit rep
+
+        return opcode+rs+imm  # Return encoding
 
 
     def encode_JMP(self, instruction):
         if not re.match(r'^JMP\s+\d+$', instruction):
             raise ValueError(f"Syntax error in instruction: {instruction}")
+        
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
-        # get the second token (rt);
-        imm = bin(int(tokens[1]))[2:].zfill(3)  # zfill(length): pads a string on the left with zeros (0) until it reaches a specified length.
-        if len(imm) > 3:
-            raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
-        opcode = "111000" # 111
-        return opcode+imm
+        
+        target = bin(int(tokens[1]))[2:].zfill(6)  # Convert target address to 6-bit binary
+        if len(target) > 6:
+            raise ValueError(f"Target address out of bounds: {tokens[1]}")
 
+        opcode = "111"
+
+        # Perform jump: PC = target
+        self.PC = int(tokens[1])  # convert binary target address to integer
+
+        return opcode+target  # Return encoding
  
+
     def from_file(self, input_file="source.txt"):   # source assembly language file
         with open(input_file, 'r') as file:
             instructions = file.readlines()         # read instrutions line by line
@@ -288,6 +385,7 @@ class Assembler:
             with open("inst.txt", 'w') as out_file:       # output machine code file
                 for code in binary_codes:
                     out_file.write(code + '\n')   # write machine code line by line
+
 
 assembler = Assembler()
 assembler.from_file()

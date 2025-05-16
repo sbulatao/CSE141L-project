@@ -1,5 +1,16 @@
-ADD r1
-ADD r5
-EQ r2 r7
-EQ r0 r3
-ADDI 6
+LWI 5
+ADD r3
+SUB r1
+AND r2
+OR r4
+BAN r6
+BOR r7
+LWR r5
+STR r0
+ADDI 3
+SUBI 2
+BRC 1
+SLL 2
+EQ r6 r2
+LWRI r1 3
+JMP 25
