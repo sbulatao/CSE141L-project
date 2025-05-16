@@ -14,7 +14,6 @@ class Assembler:
         }
  
     def encode(self, instruction):
-        instruction = instruction.upper()  # convert to uppercase
 
         if "ADD" in instruction and "ADDI" not in instruction:
             return self.encode_ADD(instruction)
@@ -72,7 +71,7 @@ class Assembler:
 # 0x: hex imm; [a-fA-F0-9]: hex imm like 01C, 4D2,... FFF; \d: decimal imm like 0, 5,..., 13; $: end;
  
     def encode_ADD(self, instruction):
-        if not re.match(r'^ADD\s+[r0-7]$', instruction):   # a regular expression (ADD rs)
+        if not re.match(r'^ADD\s+r[0-7]$', instruction):   # a regular expression (ADD rs)
             raise ValueError(f"Syntax error in instruction: {instruction}")     
         tokens = instruction.split()        # splits the instruction string into a list, using spaces as the separator
         
