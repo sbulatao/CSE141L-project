@@ -12,10 +12,6 @@ class Assembler:
             "r6": "110",
             "r7": "111",
         }
-        self.Acc = "00000000"  # accumulator
-        self.PC = 0  # program counter
-        self.memory = [0] * 8  # memory initialized to 0, size 8 bytes
-        self.BranchFlag = 0  # branch flag initialized to 0
  
     def encode(self, instruction):
 
@@ -74,7 +70,6 @@ class Assembler:
 # ^: begin; \s: space; \s*: repeated spaces; [a-z0-9]: means format like a0, a1, ..., z9; 
 # 0x: hex imm; [a-fA-F0-9]: hex imm like 01C, 4D2,... FFF; \d: decimal imm like 0, 5,..., 13; $: end;
     
-
     def encode_ADD(self, instruction):
         if not re.match(r'^ADD\s+r[0-7]$', instruction):   # a regular expression (ADD rs)
             raise ValueError(f"Syntax error in instruction: {instruction}")     
@@ -86,9 +81,6 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000000"
-
-        # Update Acc: Acc = Acc + rf[rs]
-        self.Acc = bin(int(self.Acc, 2) + int(rs, 2))[2:].zfill(8)  # Ensure 8-bit representation
 
         return opcode+rs  # return encoding 
 
@@ -105,9 +97,6 @@ class Assembler:
         
         opcode = "000001"
 
-        # Update Acc: Acc = Acc - rf[rs]
-        self.Acc = bin(int(self.Acc, 2) - int(rs, 2))[2:].zfill(8)  # Ensure 8-bit representation
-
         return opcode+rs  # return encoding
 
 
@@ -122,9 +111,6 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "000010"
-
-        # Perform bitwise AND: Acc = Acc & rf[rs]
-        self.Acc = bin(int(self.Acc, 2) & int(rs, 2))[2:].zfill(8)  # ensure 8-bit representation
 
         return opcode+rs  # return encoding
 
@@ -141,9 +127,6 @@ class Assembler:
         
         opcode = "000011"
 
-        # Perform bitwise OR: Acc = Acc | rf[rs]
-        self.Acc = bin(int(self.Acc, 2) | int(rs, 2))[2:].zfill(8)  # ensure 8-bit rep
-
         return opcode+rs  # return encoding 
 
 
@@ -154,9 +137,6 @@ class Assembler:
         
         opcode = "000101"
         unusedBits = "000"  # 3 bits placeholder xxx
-
-        # Perform BAN operation: Acc = Acc (since Acc & Acc = Acc)
-        self.Acc = bin(int(self.Acc, 2))[2:].zfill(8)  # ensure 8-bit rep
 
         return opcode+unusedBits  # return encoding
 
@@ -169,9 +149,6 @@ class Assembler:
         
         opcode = "000110"
         unusedBits = "000"  # Placeholder since xxx is unused
-
-        # Perform BOR operation: Acc = |Acc --> no actual changes OR-ing with itself
-        self.Acc = bin(int(self.Acc, 2))[2:].zfill(8)  # ensure 8-bit rep
 
         return opcode+unusedBits  # return encoding
 
@@ -187,10 +164,6 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "001000"
-        
-        # Load value from memory: Acc = MEM(rs)
-        memAddress = int(rs, 2)  # convert binary reg. addredss to integer index
-        self.Acc = bin(self.memory[memAddress])[2:].zfill(8)  # retrieve value from memory and format
 
         return opcode+rs  # return encoding
 
@@ -206,10 +179,6 @@ class Assembler:
             raise ValueError(f"Unknown register: {tokens[1]}")
         
         opcode = "001001"
-
-        # Store Acc into memory at rs location: MEM(rs) = Acc
-        memAddress = int(rs, 2)  # convert binary reg. address to integer index
-        self.memory[memAddress] = int(self.Acc, 2)  # store Acc in memory
 
         return opcode+rs  # return encoding 
     
@@ -227,9 +196,6 @@ class Assembler:
         
         opcode = "010000"
 
-        # Perform addition: Acc = Acc + imm
-        self.Acc = bin(int(self.Acc, 2) + int(imm, 2))[2:].zfill(8)  # update Acc directly
-
         return opcode+imm  # Return encoding 
     
 
@@ -245,9 +211,6 @@ class Assembler:
         
         opcode = "010001"
 
-        # Perform subtraction: Acc = Acc - imm
-        self.Acc = bin(int(self.Acc, 2) - int(imm, 2))[2:].zfill(8)  # update Acc directly
-
         return opcode+imm  # return encoding 
 
 
@@ -262,9 +225,6 @@ class Assembler:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
         
         opcode = "010010"
-
-        # Load immediate into Acc: Acc = imm
-        Acc = imm.zfill(8)  # ensure 8-bit rep
 
         return opcode+imm  # return encoding
 
@@ -282,12 +242,6 @@ class Assembler:
 
         opcode = "010101"
 
-        # Update PC conditionally based on BranchFlag
-        if self.BranchFlag == 1:
-            self.PC += 1 + int(imm, 2)  # if flag is set, apply offset
-        else:
-            self.PC += 1  # Otherwise, proceed normally
-
         return opcode+imm  # return encoding
 
 
@@ -302,9 +256,6 @@ class Assembler:
             raise ValueError(f"Immediate value out of bounds: {tokens[1]}")
         
         opcode = "010111"
-
-        # Perform left shift: Acc = Acc << imm
-        self.Acc = bin(int(self.Acc, 2) << int(imm, 2))[2:].zfill(8)  # update Acc directly
 
         return opcode+imm  # return encoding 
     
@@ -328,12 +279,6 @@ class Assembler:
         
         opcode = "100"
 
-        # Compare values stored in memory at rs and rt locations
-        if self.memory[int(rs, 2)] == self.memory[int(rt, 2)]: # Compare memory contents
-            self.BranchFlag = 1  # Set branch flag if registers match
-        else:
-            self.BranchFlag = 0  # Otherwise, reset branch flag
-
         return opcode+rs+rt  # return encoding
     
 
@@ -354,9 +299,6 @@ class Assembler:
         
         opcode = "101"
 
-         # Perform load immediate: rf[rs] = imm
-        self.registers[tokens[1]] = imm.zfill(8)  # ensure 8-bit rep
-
         return opcode+rs+imm  # Return encoding
 
 
@@ -371,9 +313,6 @@ class Assembler:
             raise ValueError(f"Target address out of bounds: {tokens[1]}")
 
         opcode = "111"
-
-        # Perform jump: PC = target
-        self.PC = int(tokens[1])  # convert binary target address to integer
 
         return opcode+target  # Return encoding
  
