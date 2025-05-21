@@ -25,7 +25,7 @@ module datapath(
 );
 
     wire [4:0]  writereg;
-    wire [7:0]  pc_jr_jmp
+  	wire [7:0]  pc_jr_jmp;
     wire [7:0]  pcNext;
     wire [7:0]  pcResult;
     wire [7:0]  pcPlus1;

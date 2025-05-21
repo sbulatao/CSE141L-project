@@ -34,9 +34,9 @@ always @(posedge clk) begin
         18 : inst <= 9'b010001_001;     // SUBI 1:     acc <- acc - 1
 
         // Jump test
-        19 : inst <= 9'b101_110_;    // LWRI r3,5:  r3 <- 5                 r3 = 5
-        19 : inst <= 9'b110_000_010;     // JMP 10:     pc <- 10 << 2 = 40
-        19 : inst <= 9'b111_001010;     // JMP 10:     pc <- 10 << 2 = 40
+        19 : inst <= 9'b111_010101;     // JMP 21:     pc <- 21
+      	21 : inst <= 9'b101_010_111;    // LWRI r2,5:  r2 <- 7
+        22 : inst <= 9'b110_000_010;     // JR r2:     pc <- r2 = 7
 
         default : inst <= 9'b000000000; // NOP
     endcase

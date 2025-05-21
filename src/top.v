@@ -7,7 +7,7 @@ module top(
     input  wire        rst,
     input  wire        start,
     output wire        done
-)
+);
 
     wire   [7:0]       pc;
     wire   [8:0]       inst;

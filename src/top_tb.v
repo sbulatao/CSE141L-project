@@ -5,20 +5,32 @@ module tb_top;
     // Inputs
     reg clk;
     reg rst;
+    reg start;
 
     // Outputs
-    wire [7:0] rd2_Data;
-    wire [7:0] ALUOut;
-    wire       MemWrite;
+    wire done;
+    // wire [7:0] rd2_Data;
+    // wire [7:0] ALUOut;
+    // wire       MemWrite;
+
+    // Internal wires for monitoring
+    wire [7:0] pc;
+    wire [8:0] inst;
 
     // Instantiate the top module
     top uut (
         .clk(clk),
         .rst(rst),
-        .rd2_Data(rd2_Data),
-        .ALUOut(ALUOut),
-        .MemWrite(MemWrite)
+        .start(start),
+        .done(done)
     );
+
+    // Assign internal signals from uut
+    assign pc   = uut.mips_u.pc;
+    assign inst = uut.mips_u.inst;
+    // assign rd2_Data = uut.mips_u.rd2_Data;
+    // assign ALUOut   = uut.mips_u.ALUOut;
+    // assign MemWrite = uut.mips_u.MemWrite;
 
     // Clock generation: 10ns period
     initial clk = 0;
@@ -26,22 +38,26 @@ module tb_top;
 
     // Test sequence
     initial begin
-        // Initialize reset
+        // Initialize signals
         rst = 1;
+        start = 0;
         #20;
-        rst = 0;
 
-        // Run simulation for a while
-        #200;
+        rst = 0;
+        start = 1;
+
+        // Wait until done or timeout
+        wait(done);
+        #20;
 
         // Finish simulation
         $finish;
     end
 
-    // Optional: Monitor outputs
+    // Monitor signals
     initial begin
-        $monitor("Time=%0t | pc=%d | inst=%b | ALUOut=%b | rd2_Data=%b | MemWrite=%b", 
-                  $time,   uut.pc, uut.inst, ALUOut,     rd2_Data,     MemWrite);
+    	$monitor("Time=%0t | pc=%d | inst=%b | done=%b", 
+                  $time,    pc,     inst,     done);
     end
 
     // Waveform dumping
