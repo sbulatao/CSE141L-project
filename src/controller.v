@@ -11,7 +11,7 @@ module controller(
 	output wire PcSrc,
 	output wire ALUSrc,
 	output wire RegWrite,
-	output wire Jump,
+	output wire[1:0] Jump,
   	output wire[2:0] ALUControl,
 
   	output wire[2:0] AccControl

@@ -19,7 +19,7 @@ module mips(
     wire PcSrc;
     wire ALUSrc;
     wire RegWrite;
-    wire Jump;
+    wire [1:0] Jump;
     wire [2:0] ALUControl;
     wire [2:0] AccControl;
 

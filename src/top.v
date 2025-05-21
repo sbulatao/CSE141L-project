@@ -5,18 +5,26 @@
 module top(
     input  wire        clk,
     input  wire        rst,
-    output wire [7:0]  rd2_Data,
-    output wire [7:0]  ALUOut,
-    output wire        MemWrite
-);
+    input  wire        start,
+    output wire        done
+)
 
     wire   [7:0]       pc;
     wire   [8:0]       inst;
     wire   [7:0]       ReadData;
+    wire   [7:0]       rd2_Data;
+    wire   [7:0]       ALUOut;
+    wire               MemWrite;
 
-	mips mips_u (
+    wire               internal_rst;
+
+    assign internal_rst = rst | ~start;
+
+    assign done = (pc == 8'hFF);
+
+    mips mips_u (
         .clk(clk),
-        .rst(rst),
+        .rst(internal_rst),
         .ReadData(ReadData),
         .inst(inst),
         .pc(pc),
@@ -25,18 +33,18 @@ module top(
         .rd2_Data(rd2_Data)
     );
 
-	instmem imem(
-		.clk(clk),
-		.pc(pc),
-		.inst(inst)
-	);
+    instmem imem(
+        .clk(clk),
+        .pc(pc),
+        .inst(inst)
+    );
 
-	datamem dmem(
-		.clk(~clk),
-		.MemWrite(MemWrite),
-		.DataAddr(ALUOut),
-		.DataIn(rd2_Data),
-		.DataOut(ReadData)
-	);
-	
+    datamem dmem(
+        .clk(~clk),
+        .MemWrite(MemWrite),
+        .DataAddr(ALUOut),
+        .DataIn(rd2_Data),
+        .DataOut(ReadData)
+    );
+
 endmodule

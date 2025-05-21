@@ -12,7 +12,7 @@ module datapath(
     input  wire        PcSrc,
     input  wire        ALUSrc,
     input  wire        RegWrite,
-    input  wire        Jump,
+    input  wire [1:0]  Jump,
     input  wire [2:0]  ALUControl,
     input  wire [2:0]  AccControl,
     input  wire [8:0]  inst,
@@ -25,6 +25,7 @@ module datapath(
 );
 
     wire [4:0]  writereg;
+    wire [7:0]  pc_jr_jmp
     wire [7:0]  pcNext;
     wire [7:0]  pcResult;
     wire [7:0]  pcPlus1;
@@ -36,7 +37,7 @@ module datapath(
     wire [7:0]  result;
     wire BranchFlag_r;
 
-	my_dff #(.WIDTH(8)) dff_u (
+	dff #(.WIDTH(8)) dff_u (
 		.clk(clk),
 		.rst(rst),
 		.d(pcNext),
@@ -49,14 +50,8 @@ module datapath(
 		.y(pcPlus1)
 	);
 
-	// shiftleft2 	shiftleft2_branch (
-	// 	.in_a(SignImm),
-	// 	.shift_y(SignImmShift)
-	// );
-
 	adder adder_branch (
 		.a(pcPlus1),
-		// .b(SignImmShift),
 		.b(SignImm),
 		.y(pcBranch)
 	);
@@ -68,16 +63,18 @@ module datapath(
         .mux_y(pcResult)
     );
 
-	// shiftleft2 	shiftleft2_jump (
-	// 	.in_a(inst[5:0]),
-	// 	.shift_y(JumpAddr)
-	// );
-
 	mux2 #(.WIDTH(8)) mux_pcnext (
         .mux_d0(pcResult),
-        .mux_d1({inst[5:0],2'b00}),
-        .mux_sel(Jump),
+        .mux_d1(pc_jr_jmp),
+        .mux_sel(Jump[0]),
         .mux_y(pcNext)
+    );
+
+    mux2 #(.WIDTH(8)) mux_jumpsrc (
+        .mux_d0({2'b00,inst[5:0]}),
+        .mux_d1(rd2_Data),
+        .mux_sel(Jump[1]),
+        .mux_y(pc_jr_jmp)
     );
 
 	regfile regfile_inst (
@@ -119,7 +116,7 @@ module datapath(
         .BranchFlag(BranchFlag_r)
     );
 
-    my_dff #(.WIDTH(1)) dff_Brc (
+    dff #(.WIDTH(1)) dff_Brc (
 		.clk(clk),
 		.rst(rst),
 		.d(BranchFlag_r),

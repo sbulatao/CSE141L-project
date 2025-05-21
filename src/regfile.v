@@ -9,7 +9,7 @@ module regfile(
 );
 
     reg [7:0] rf[7:0];   // r0[7:0], r1[7:0],...,r7[7:0], r0 = 0 by default
-    reg [7:0] acc; 
+    reg [7:0] acc;
 
     always @(posedge clk) begin
         if (wen) begin

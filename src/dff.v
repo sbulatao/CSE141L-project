@@ -1,4 +1,4 @@
-module my_dff #(
+module dff #(
 	parameter WIDTH = 8
 )(
 	input wire clk,
