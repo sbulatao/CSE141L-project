@@ -36,7 +36,7 @@
 | SLL | SI | 010111_xxx<br>6-bit op=010111<br>3-bit imm = xxx | 010011_010<br># Assume Acc = 0000_0010<br># imm = 010<br># After SLL, Acc = 0000_1000 | Acc = Acc << imm |
 | EQ | DR | 100_xxx_yyy<br>3-bit op = 100<br>3-bit rs = xxx<br>3-bit rt = yyy | 100_101_100<br># rs = 101<br># rt = 100<br># rf[101] == rf[100]<br># BranchFlag = 1 | if(rs == rt) BranchFlag = 1 |
 | LWRI | RI | 101_xxx_yyy<br>3-bit op=101<br>3-bit rs = xxx<br>3-bit imm = yyy | 101_001_011<br># Assume rs = 001<br># Assume imm = 011<br># rf[001] = 0000_0011 | rs = imm |
-| JR | J | 110_ddd_xxx<br>3-bit op=110<br>3-bit ddd are useless<br>3-bit rs = xxx | 111_ddd_101<br># Assume rs = 101<br># Assume rf[101] = 001101<br># PC = r5 = 001101 | PC = rs|
+| JR | J | 110_ddd_xxx<br>3-bit op=110<br>3-bit ddd are useless<br>3-bit rs = xxx | 111_ddd_101<br># Assume rs = 101<br># Assume rf[101] = 0010_1001<br># PC = r5 = 0010_1001 | PC = rs|
 | JMP | J | 111_xxxxxx<br>3-bit op=111<br>6-bit imm = xxxxxx | 111_001101<br># PC = imm = 001101 | PC = imm|
 
 ---
