@@ -1,3 +1,4 @@
+/*
 module instmem(
    input        	clk,
    input  	  [7:0] pc,
@@ -24,10 +25,11 @@ always @(posedge clk) begin
         12 : inst <= 9'b000110_000;     // BOR:        acc <- |acc             acc = 0
 
         // EQ and BRC testing
-        13 : inst <= 9'b101_100_101;    // LWRI r4,5:  r4 <- 5                 r4 = 5
-        14 : inst <= 9'b101_101_101;    // LWRI r5,5:  r5 <- 5                 r5 = 5
-        15 : inst <= 9'b100_100_101;    // EQ r4 r5:   BranchFlag = 1 (equal)
-        16 : inst <= 9'b010101_001;     // BRC 1:      jump to pc+1+1 = 18 if BF == 1
+        13 : inst <= 9'b101_100_010;    // LWRI r4,2:  r4 <- 2                 r4 = 2
+        14 : inst <= 9'b101_100_101;    // LWRI r4,5:  r4 <- 5                 r4 = 5
+        15 : inst <= 9'b101_101_101;    // LWRI r5,5:  r5 <- 5                 r5 = 5
+        16 : inst <= 9'b100_100_101;    // EQ r4 r5:   BranchFlag = 1 (equal)
+        17 : inst <= 9'b010101_100;     // BRC -4:     jump to pc+1-4=14 if BF == 1
 
         // This ADDI should be skipped if BRC is taken
         17 : inst <= 9'b010000_001;     // ADDI 1:     (This line should be skipped)
@@ -35,12 +37,31 @@ always @(posedge clk) begin
 
         // Jump test
         19 : inst <= 9'b111_010101;     // JMP 21:     pc <- 21
-      	21 : inst <= 9'b101_010_111;    // LWRI r2,5:  r2 <- 7
-        22 : inst <= 9'b110_000_010;     // JR r2:     pc <- r2 = 7
+      	20 : inst <= 9'b101_010_111;    // LWRI r2,5:  r2 <- 7
+        21 : inst <= 9'b010010_000;     // LWI 0:      acc <- 0
+        22 : inst <= 9'b010000_001;     // ADDI 1:     acc <- acc + 1 = 1
+        23 : inst <= 9'b010111_010;     // SLL 2:      acc <- acc << 2         acc = 4
+        24 : inst <= 9'b110_000_000;    // JR acc:     pc <- acc = 4
 
         default : inst <= 9'b000000000; // NOP
     endcase
 end
+endmodule
+*/
+module instmem(
+    input clk,
+    input [7:0] pc,
+    output reg [8:0] inst
+);
 
+    reg [8:0] memory [0:255];
+
+    initial begin
+        $readmemb("inst.txt", memory);
+    end
+
+    always @(posedge clk) begin
+        inst <= memory[pc];
+    end
 
 endmodule

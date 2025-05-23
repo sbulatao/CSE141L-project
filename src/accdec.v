@@ -19,8 +19,9 @@ module accdec(
 			end
 			3'b010: AccControl <= 3'b001;	// model1: acc = acc + imm	SI
 			3'b100: AccControl <= 3'b011;	// model3: EQ rs rt			DR
+			3'b110: AccControl <= 3'b010;	// for JR
 			3'b111: AccControl <= 3'b100;	// model4: jump				JMP
-			3'b101: AccControl <= 3'b111;	// model7: LWR rs<-imm		RI
+			3'b101: AccControl <= 3'b111;	// model7: LWRI rs<-imm		RI
 			default: AccControl <= 3'b000;	// invalid
 		endcase
 	end
