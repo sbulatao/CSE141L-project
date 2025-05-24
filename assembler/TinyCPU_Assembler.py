@@ -158,11 +158,8 @@ class Assembler:
         target_pc = self.symbol_table[label_name]
         offset = target_pc - (current_instruction_pc + 1)
 
-        if not (-4 <= offset <= 3): # 3-bit signed offset range
-             raise ValueError(f"BRC offset {offset} for label '{label_name}' out of 3-bit signed range (-4 to 3) at line {line_num}.")
-        
-        if offset < 0:
-            offset_bin = bin((1 << 3) + offset)[2:].zfill(3) # 3-bit two's complement. TinyCPU can't deal with signed number ... neet improvement
+        if not (0 <= offset <= 7): # 3-bit signed offset range
+             raise ValueError(f"BRC offset {offset} for label '{label_name}' out of 3-bit signed range (0 to 7) at line {line_num}.")
         else:
             offset_bin = bin(offset)[2:].zfill(3)
         
@@ -189,18 +186,21 @@ class Assembler:
         opcode = "100"
         return opcode + rs + rt
 
-    def encode_LWRI(self, instruction_parts, line_num, pc):
-        if not (len(instruction_parts) == 3 and
-                instruction_parts[1].upper() in self.registers and
-                instruction_parts[2].isdigit()):
+    def encode_MOV(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 2 and
+                instruction_parts[1].upper() in self.registers):
             raise ValueError(f"Syntax error in LWRI instruction at line {line_num}: { ' '.join(instruction_parts)}")
         rs = self.registers[instruction_parts[1].upper()]
-        imm_val = int(instruction_parts[2])
-        if not (0 <= imm_val <= 7): # Assuming 3-bit immediate
-            raise ValueError(f"Immediate value out of bounds (0-7) for LWRI at line {line_num}: {imm_val}")
-        imm = bin(imm_val)[2:].zfill(3)
         opcode = "101"
-        return opcode + rs + imm
+        d = "000"
+        return opcode + d + rs
+    
+    def encode_JR(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 1):
+            raise ValueError(f"Syntax error in JR instruction at line {line_num}: { ' '.join(instruction_parts)}")
+        opcode = "110"
+        d = "000000"
+        return opcode + d
 
     def encode_JMP(self, instruction_parts, line_num, current_instruction_pc):
         if not (len(instruction_parts) == 2):
@@ -212,7 +212,7 @@ class Assembler:
 
         target_address = self.symbol_table[label_name]
 
-        if not (0 <= target_address <= 63): # Max for 6 bits
+        if not (0 <= target_address <= 63*4): # Max for 6 bits
             raise ValueError(f"JMP target address {target_address} for label '{label_name}' out of 6-bit range (0-63) at line {line_num}.")
         
         target_bin = bin(target_address)[2:].zfill(6)
@@ -254,8 +254,10 @@ class Assembler:
             return self.encode_SLL(parts, line_num, current_instruction_pc)
         elif opcode_name == "EQ":
             return self.encode_EQ(parts, line_num, current_instruction_pc)
-        elif opcode_name == "LWRI":
-            return self.encode_LWRI(parts, line_num, current_instruction_pc)
+        elif opcode_name == "MOV":
+            return self.encode_MOV(parts, line_num, current_instruction_pc)
+        elif opcode_name == "JR":
+            return self.encode_JR(parts, line_num, current_instruction_pc)
         elif opcode_name == "JMP":
             return self.encode_JMP(parts, line_num, current_instruction_pc)
         else:

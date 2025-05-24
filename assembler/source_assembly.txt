@@ -1,0 +1,31 @@
+LWI 1
+MOV r1
+LWI 1
+MOV r2
+EQ r1 r2
+BRC label
+
+helper_label_1_target:
+LWI 7
+SLL 1
+ADDI 6
+JR
+
+label:
+LWI 1
+MOV r1
+LWI 1
+MOV r2
+EQ r1 r2
+BRC helper_label_1
+JMP skip_hehelper_label_1
+
+helper_label_1:
+JMP helper_label_1_target
+
+skip_hehelper_label_1:
+LWI 2
+MOV r1
+
+end:
+LWI 0
