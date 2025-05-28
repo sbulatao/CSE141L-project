@@ -16,19 +16,19 @@ module TopLevel0 (
   logic        trap;                    // max neg or 0 input
   bit  [ 1:0]  pgm;                     // counts 1, 2, 3 program
 // port connections to dummy data_mem
-  bit     [7:0]  DataAddress;		    // pointer
+  bit     [7:0]  DataAddr;		    // pointer
   bit            ReadMem;			
-  bit            WriteMem;				// write enable
+  bit            MemWrite;				// write enable
   bit     [7:0]  DataIn;				// data input port 
   wire    [7:0]  DataOut;				// data output port
-  data_mem       data_mem1(.*);	  		// dummy data_memory for compatibility
+  datamem       data_mem1(.*);	  		// dummy data_memory for compatibility
 
   always @(posedge clk) begin
 	if(reset) begin 
 	  pgm     = pgm+'b1;			    // move to the next program
 	end	                                // do nothing else
   else if(start) begin
-	  int1    = {data_mem1.mem_core[1],data_mem1.mem_core[0]};
+	  int1    = {data_mem1.dm[1],data_mem1.dm[0]};
 	  sgn     = int1[15];               // two's comp MSB also works as fl pt sign bit
 	  trap    = !int1[14:0];            // trap 0 or 16'h8000) 
     exp     = 6'd22;			   	    // biased exponent starting value = 6 + 15
@@ -67,7 +67,7 @@ module TopLevel0 (
 		end
 			*/
 //		$display("postround exp = %d",exp);  
-        #10ns {data_mem1.mem_core[3],data_mem1.mem_core[2]} = {sgn,exp[4:0],int1[15:6]};
+        #10ns {data_mem1.dm[3],data_mem1.dm[2]} = {sgn,exp[4:0],int1[15:6]};
 	  #20000ns done = '1;                   // adjust as needed for your design
     end	 :nonreset
   end
