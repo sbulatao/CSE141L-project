@@ -1,3 +1,7 @@
+`include "../src/mips.v"
+`include "../src/instmem.v"
+`include "../src/datamem.v"
+
 // CSE141L   revised 2025.05.28
 // testbench for fixed(8.8) to float(16) conversion
 // bench computes theoretical result
@@ -6,11 +10,11 @@
 // keyword bit is same as logic, except it self-initializes
 //  to 0 and cannot take on x or z value
 module new_int2flt_tb();
-  bit       clk       , 
-            reset = '1,
-            req;
-  wire      ack,			 // your DUT's done flag
-            ack0;			 // my dummy done flag
+  bit         clk       , 
+              reset = '1,
+              req;
+  wire        ack,			 // your DUT's done flag
+              ack0;			 // my dummy done flag
   bit  [15:0] int_in; 	     // incoming operand
   logic[15:0] int_out0;      // reconstructed integer from my reference
   logic[15:0] int_out;       // reconstructed integer from your floating point output
@@ -23,11 +27,17 @@ module new_int2flt_tb();
               score0,	     // your DUT vs. mine
 			  count = 0;     // number of trials
 
-  TopLevel f1(				 // your DUT to generate right answer
-    .Clk  (clk),
-	.Start(req),
-    .Reset(reset),
-    .Return (ack));	         // your ack is the one that counts
+//   TopLevel f1(				 // your DUT to generate right answer
+//     .Clk  (clk),
+// 	.Start(req),
+//     .Reset(reset),
+//     .Return (ack));	         // your ack is the one that counts
+  top f1(
+	.clk(clk),
+	.rst(reset),
+	.start(req),
+	.done(ack));
+
   TopLevel0 f0(				 // reference DUT goes here
     .clk  (clk),			 // 
     .start(req),			 //  
@@ -40,7 +50,8 @@ module new_int2flt_tb();
   end
 
   initial begin				 // test sequence
-    $monitor("data_mem.core0, 1 = %b  %b %t",f0.data_mem1.mem_core[3],f1.DM1.Core[3],$time);
+    // $monitor("data_mem.core0, 1 = %b  %b %t",f0.data_mem1.dm[3],f1.DM1.Core[3],$time);
+	$monitor("data_mem.core0, 1 = %b  %b %t",f0.data_mem1.dm[3],f1.dmem.dm[3],$time);
 
     //#20ns reset = '0;
 	disp2(int_in);			 // subroutine call
@@ -128,18 +139,23 @@ task automatic disp2(input logic [15:0] int_in);
 	#10ns;
 	reset = 0;
 
-	f1.DM1.Core[1] = int_in[ 7:0];   // load operands into your memory
-	f1.DM1.Core[0] = int_in[15:8];
-	f0.data_mem1.mem_core[1] = int_in[15:8];   // load operands into my memory
-	f0.data_mem1.mem_core[0] = int_in[ 7:0];
+	// f1.DM1.Core[1] = int_in[ 7:0];   // load operands into your memory
+	// f1.DM1.Core[0] = int_in[15:8];
+	f1.dmem.dm[0]  = int_in[ 7:0];
+	f1.dmem.dm[1]  = int_in[15:8];
+
+	f0.data_mem1.dm[1] = int_in[15:8];   // load operands into my memory
+	f0.data_mem1.dm[0] = int_in[ 7:0];
     //flt_out_M[15]     = sgn_M;                 // sign is a passthrough
 	#10ns req = 1;
 	#10ns req = 0;
 	wait(ack);
 	wait(ack0);
 	#10ns;
-  	flt_out  = {f1.DM1.Core[2],f1.DM1.Core[3]};	 // results from your memory
-    flt_out0 = {f0.data_mem1.mem_core[3],f0.data_mem1.mem_core[2]};	 // results from my dummy DUT
+  	// flt_out  = {f1.DM1.Core[2],f1.DM1.Core[3]};	 // results from your memory
+    flt_out  = {f1.dmem.dm[3], f1.dmem.dm[2]};	 // results from your DUT
+
+    flt_out0 = {f0.data_mem1.dm[3],f0.data_mem1.dm[2]};	 // results from my dummy DUT
     $display("what's feeding the case %b",int_in);
 	// exp_M  = '0;                           // initial point -- override as needed		   
 	// mant_M = '0;
