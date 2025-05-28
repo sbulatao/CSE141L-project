@@ -1,0 +1,582 @@
+; Program: Fixed-point (8.8) to Floating-point (16-bit) Conversion
+; Based on Verilog TopLevel0 module.
+
+; --- Register Allocation ---
+; r0: Hardwired to 0
+; r1: General Temporary / Address Holder for LWR/STR
+; r2: int1_lo (low byte of 16-bit int1)
+; r3: int1_hi (high byte of 16-bit int1)
+; r4: exp (exponent)
+; r5: ct (normalization loop counter)
+; r6: sgn_flag (0 or 1) / Temporary
+; r7: Constant 1 / Temporary / Bit Masks
+
+; --- Memory Addresses (Conceptual constants for assembler) ---
+; ADDR_DM_0 equ 0  ; data_mem1.dm[0] - input int1 low byte
+; ADDR_DM_1 equ 1  ; data_mem1.dm[1] - input int1 high byte
+; ADDR_DM_2 equ 2  ; data_mem1.dm[2] - output low byte {int1[13:6]}
+; ADDR_DM_3 equ 3  ; data_mem1.dm[3] - output high byte {sgn,exp[4:0],int1[15:14]}
+
+; ==============================================================================
+; MACRO: LOAD_CONST_ACC value (8-bit)
+; Loads an 8-bit 'value' into Acc. Uses r1 as a temporary if needed for SLL.
+; This is a conceptual macro; actual instructions depend on the value.
+; Example: LOAD_CONST_ACC 22
+;   LWI 6        ; Acc = 6 (0b110)
+;   MOV r1   ; r1 = 6
+;   LWI 1        ; Acc = 1
+;   SLL 4        ; Acc = 16 (0b10000)
+;   ADD r1       ; Acc = 16 + 6 = 22
+; END_MACRO
+
+; MACRO: LOAD_CONST_REG reg_dest, value
+; Loads an 8-bit 'value' into reg_dest. Uses Acc and r1 as temporaries.
+; Example: LOAD_CONST_REG r4, 22
+;   CALL_LOAD_CONST_ACC_22 ; Acc = 22 (using a pre-defined sequence for 22)
+;   MOV r4
+; END_MACRO
+; ==============================================================================
+
+START_CONVERSION:
+; This is equivalent to the Verilog `else if(start)` block.
+
+; --- int1 = {data_mem1.dm[1], data_mem1.dm[0]}; ---
+; Load dm[0] into r2 (int1_lo)
+  LWI 0           ; Acc = 0 (address of dm[0])
+  MOV r1      ; r1 = address 0
+  LWR r1          ; Acc = MEM[r1] = dm[0]
+  MOV r2      ; r2 (int1_lo) = Acc
+
+; Load dm[1] into r3 (int1_hi)
+  LWI 1           ; Acc = 1 (address of dm[1])
+  MOV r1      ; r1 = address 1
+  LWR r1          ; Acc = MEM[r1] = dm[1]
+  MOV r3      ; r3 (int1_hi) = Acc
+
+; --- sgn = int1[15]; ---
+; int1[15] is MSB of r3 (int1_hi). Store sgn in r6.
+; To get MSB: Acc = r3, shift left until MSB is LSB, or AND with 0x80.
+; Let's use AND with 0x80 (10000000b)
+  ; LOAD_CONST_ACC 128 (0x80) into Acc
+  LWI 0           ; Acc = 0
+  MOV r1      ; r1 = 0 (temp sum)
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128
+  ADD r1          ; Acc = 128 + 0 = 128
+  MOV r7      ; r7 = 0x80 (mask)
+
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3 (int1_hi)
+  AND r7          ; Acc = Acc & 0x80. Acc is 0x80 if MSB was 1, else 0x00.
+  ; Now convert this to 0 or 1 for sgn_flag (r6)
+  ; If Acc is 0x80, sgn=1. If Acc is 0x00, sgn=0.
+  ; We can use BOR: if Acc !=0, BOR -> 1. If Acc == 0, BOR -> 0.
+  BOR             ; Acc = |Acc. If Acc was 0x80, Acc becomes 1. If 0x00, Acc becomes 0.
+  MOV r6      ; r6 (sgn_flag) = Acc (0 or 1)
+
+; --- trap = !int1[14:0]; ---
+; Trap if int1 == 0 OR int1 == 16'h8000.
+; int1 == 0 means r3 (hi) == 0 AND r2 (lo) == 0.
+; int1 == 16'h8000 means r3 (hi) == 0x80 AND r2 (lo) == 0.
+; So, trap if r2 (lo) == 0 AND (r3 (hi) == 0 OR r3 (hi) == 0x80).
+
+  ; Check if r2 (int1_lo) == 0.
+  EQ r2 r0          ; BranchFlag = 1 if r2 == 0.
+  ; If r2 != 0, no trap. BranchFlag will be 0.
+  ; We need BranchFlag to be 1 for BRC if trap IS true.
+  ; Let's evaluate step-by-step.
+  ; Store result of (r2==0) in a temp, say r1, for now.
+  ; (This is getting complex with only one BranchFlag. Let's try sequential checks)
+
+  LWI 0             ; Assume no trap initially. Acc = 0 for trap_occurred_flag.
+  MOV r7        ; r7 = 0 (trap_occurred_flag)
+
+  ; Check r2 (int1_lo) == 0
+  LWI 0             ; Acc = 0
+  ADD r2            ; Acc = r2
+  BOR               ; Acc = |Acc. If r2 was 0, Acc is 0. Else Acc is 1.
+  ; We want to proceed if r2 is 0.
+  ; If Acc is NOT 0 (meaning r2 is NOT 0), then no trap.
+  EQ Acc r0         ; BranchFlag = 1 if Acc is 0 (i.e. r2 was 0).
+  BRC R2_IS_ZERO    ; If r2 is 0, continue checking r3.
+  JMP CHECK_TRAP_DONE ; If r2 is not 0, then trap is false.
+
+R2_IS_ZERO:
+  ; At this point, r2 (int1_lo) is 0. Now check r3 (int1_hi).
+  ; Check if r3 == 0.
+  EQ r3 r0          ; BranchFlag = 1 if r3 == 0.
+  BRC R3_IS_ZERO_AND_R2_IS_ZERO ; If r3 == 0 (and r2 was 0), it's a trap.
+
+  ; Check if r3 == 0x80 (128)
+  ; LOAD_CONST_ACC 128 into Acc
+  LWI 0           ; Acc = 0
+  MOV r1      ; r1 = 0
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128
+  ADD r1          ; Acc = 128
+  MOV r1      ; r1 = 128 (constant 0x80)
+  EQ r3 r1          ; BranchFlag = 1 if r3 == 0x80.
+  BRC R3_IS_0X80_AND_R2_IS_ZERO ; If r3 == 0x80 (and r2 was 0), it's a trap.
+
+  ; If neither r3==0 nor r3==0x80 (and r2 was 0), then no trap from these conditions.
+  JMP CHECK_TRAP_DONE
+
+R3_IS_ZERO_AND_R2_IS_ZERO:
+R3_IS_0X80_AND_R2_IS_ZERO:
+  ; Trap condition met. Set r7 (trap_occurred_flag) to 1.
+  LWI 1
+  MOV r7
+  ; Fall through to CHECK_TRAP_DONE
+
+CHECK_TRAP_DONE:
+  ; r7 now holds trap_occurred_flag (0 or 1).
+  ; We will use r7 later.
+
+; --- exp = 6'd22; --- (Biased exponent starting value)
+  ; LOAD_CONST_REG r4, 22
+  LWI 6           ; Acc = 6
+  MOV r1      ; r1 = 6
+  LWI 1           ; Acc = 1
+  SLL 4           ; Acc = 16
+  ADD r1          ; Acc = 16 + 6 = 22
+  MOV r4      ; r4 (exp) = 22
+
+; --- done = 1'b0; --- (Implicitly, program is running)
+
+; --- This section corresponds to `else if(!done)` in Verilog ---
+; --- if(sgn) int1 = ~int1 + 16'b1; --- (int1 = abs(int1))
+  ; Check sgn_flag (r6). r6 is 1 if sgn is 1 (negative).
+  EQ r6 r0          ; BranchFlag = 1 if r6 (sgn_flag) == 0 (positive).
+  BRC SKIP_ABS      ; If positive, skip taking absolute value.
+
+  ; sgn is 1 (negative), so calculate abs(int1)
+  ; int1 = ~int1 + 1. This is 16-bit.
+  ; r2 = ~r2 (int1_lo)
+  ; r3 = ~r3 (int1_hi)
+  ; Add 1 to 16-bit ~int1.
+  ; (~r2) + 1. If carry, then (~r3) + 1.
+
+  ; LOAD_CONST_ACC 255 (0xFF) for NOT operation (XOR with 0xFF)
+  LWI 7           ; Acc = 7
+  MOV r1      ; r1 = 7
+  LWI 1           ; Acc = 1
+  SLL 5           ; Acc = 32
+  ADD r1          ; Acc = 39
+  MOV r1      ; r1 = 39
+  LWI 1           ; Acc = 1
+  SLL 6           ; Acc = 64
+  ADD r1          ; Acc = 103
+  MOV r1      ; r1 = 103
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128
+  ADD r1          ; Acc = 231
+  MOV r1      ; r1 = 231
+  LWI 1           ; Acc = 1
+  SLL 2           ; Acc = 4
+  ADD r1          ; Acc = 235 ; Error in manual 255 build, LWI 7, LWI 7 SLL 3 ADD, LWI 7 SLL 4 ADD ...
+  ; Simpler: Load 0, SUBI 1 (Acc = -1 = 0xFF), then AND with register
+  ; However, ISA has no XOR. ~X = X XOR 0xFF.
+  ; ISA has no NOT instruction directly.
+  ; We can do X = 0 - X - 1 for ~X (if we consider 2's complement for intermediate 0-X).
+  ; Or, for each bit: if bit is 0, make it 1, if 1, make it 0. This is too complex.
+  ; Let's assume we need to implement NOT bit by bit or use a trick.
+  ; If we had XOR: Acc = reg_val, XOR 0xFF.
+  ; Given the ISA, ~A can be (0xFF - A).
+  ; LOAD_CONST_ACC 255 into r1 (temp_0xFF)
+  LWI 7           ; Acc = 7
+  MOV r7      ; Use r7 for 0xFF
+  LWI 7           ; Acc = 7
+  SLL 3           ; Acc = 56
+  ADD r7          ; Acc = 63
+  MOV r7      ; r7 = 63
+  LWI 7           ; Acc = 7
+  SLL 4           ; Acc = 112 (this is not right, 7<<4 = 112)
+  ; Correct load of 255:
+  LWI 7           ; Acc = 7 (0b111)
+  MOV r1      ; r1 = 7
+  LWI 7           ; Acc = 7
+  SLL 3           ; Acc = 56 (0b0111000)
+  OR r1           ; Acc = 56 | 7 = 63 (0b0111111)
+  MOV r1      ; r1 = 63
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128 (0b10000000)
+  OR r1           ; Acc = 128 | 63 = 191 (0b10111111) - Still not 255.
+  ; Simplest way to get 0xFF: LWI 0, SUBI 1. (Acc = -1, which is 0xFF in 8-bit 2's comp)
+  LWI 0           ; Acc = 0
+  SUBI 1          ; Acc = -1 (0xFF)
+  MOV r7      ; r7 = 0xFF (mask for NOT via subtraction: 0xFF - val)
+
+  ; r2 = ~r2  (as 0xFF - r2)
+  LWI 0           ; Acc = 0
+  ADD r7          ; Acc = 0xFF
+  SUB r2          ; Acc = 0xFF - r2
+  MOV r2      ; r2 = ~r2
+
+  ; r3 = ~r3 (as 0xFF - r3)
+  LWI 0           ; Acc = 0
+  ADD r7          ; Acc = 0xFF
+  SUB r3          ; Acc = 0xFF - r3
+  MOV r3      ; r3 = ~r3
+
+  ; Add 1 to 16-bit value r3:r2
+  ; r2 = r2 + 1
+  LWI 1           ; Acc = 1
+  ADD r2          ; Acc = r2 + 1
+  MOV r2      ; r2 = r2 + 1
+  ; Check for carry from r2. If r2 wrapped from 0xFF to 0x00, there was a carry.
+  EQ r2 r0          ; BranchFlag = 1 if r2 == 0 (carry occurred).
+  BRC ADD_CARRY_TO_R3 ; If carry, add 1 to r3.
+  JMP SKIP_ABS      ; No carry, abs calculation done.
+
+ADD_CARRY_TO_R3:
+  LWI 1           ; Acc = 1
+  ADD r3          ; Acc = r3 + 1
+  MOV r3      ; r3 = r3 + 1
+
+SKIP_ABS:
+  ; --- if(trap) begin ... end else begin ... end ---
+  ; Check trap_occurred_flag (r7). r7 is 1 if trap is true.
+  EQ r7 r0          ; BranchFlag = 1 if r7 == 0 (no trap).
+  BRC HANDLE_NORMAL   ; If no trap, jump to normal handling.
+
+HANDLE_TRAP:        ; Trap is true (r7 == 1)
+  ; exp = sgn? 5'd22 : '0;
+  ; Check sgn_flag (r6). r6 is 1 if sgn is 1 (negative).
+  EQ r6 r0          ; BranchFlag = 1 if r6 == 0 (sgn is 0, positive).
+  BRC TRAP_SGN_IS_ZERO ; If sgn is 0.
+
+  ; Trap and sgn is 1 (max_neg case: 16'h8000)
+  ; LOAD_CONST_REG r4, 22 (exp = 22)
+  LWI 6           ; Acc = 6
+  MOV r1      ; r1 = 6
+  LWI 1           ; Acc = 1
+  SLL 4           ; Acc = 16
+  ADD r1          ; Acc = 16 + 6 = 22
+  MOV r4      ; r4 (exp) = 22
+  JMP TRAP_EXP_SET
+
+TRAP_SGN_IS_ZERO:
+  ; Trap and sgn is 0 (zero input case: 16'h0000)
+  LWI 0           ; Acc = 0
+  MOV r4      ; r4 (exp) = 0
+
+TRAP_EXP_SET:
+  ; int1 = '0;
+  LWI 0           ; Acc = 0
+  MOV r2      ; r2 (int1_lo) = 0
+  MOV r3      ; r3 (int1_hi) = 0
+  JMP END_TRAP_HANDLING ; Skip normal handling
+
+HANDLE_NORMAL:      ; No trap (r7 == 0)
+  ; --- Normalization Loop ---
+  ; for(int ct=23; ct>5; ct--)
+  ; Initialize ct (r5) = 23
+  ; LOAD_CONST_REG r5, 23
+  LWI 7           ; Acc = 7
+  MOV r1      ; r1 = 7
+  LWI 1           ; Acc = 1
+  SLL 4           ; Acc = 16
+  ADD r1          ; Acc = 16 + 7 = 23
+  MOV r5      ; r5 (ct) = 23
+
+  ; Load constant 5 into r1 for comparison ct > 5
+  LWI 5
+  MOV r1      ; r1 = 5 (loop end condition for ct)
+
+NORM_LOOP_TOP:
+  ; if(ct <= 5) break loop. (ct > 5 is loop condition)
+  ; Check r5 (ct) against r1 (5).
+  ; We want to continue if r5 > r1. Exit if r5 <= r1.
+  ; To check r5 <= r1: if (r5-r1) is negative or zero.
+  ; ISA has EQ. Can do: if r5 == r1, exit. If r5 < r1, also exit.
+  ; This is tricky. Let's count down r5 and check if r5 == r1 (which holds 5).
+  ; When r5 becomes 5, we do one last check then exit.
+  EQ r5 r1          ; BranchFlag = 1 if r5 (ct) == 5.
+  BRC NORM_LOOP_EXIT_CONDITION_MET ; If ct == 5, this is the last iteration to consider, then exit.
+
+  ; if(int1[15] == 1'b0) // int1[15] is MSB of r3 (int1_hi)
+  ; Check MSB of r3.
+  ; LOAD_CONST_ACC 128 into r7 (mask 0x80)
+  LWI 0           ; Acc = 0
+  MOV r7      ; r7 = 0
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128
+  ADD r7          ; Acc = 128
+  MOV r7      ; r7 = 0x80
+
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3 (int1_hi)
+  AND r7          ; Acc = Acc & 0x80. Acc is 0x80 if MSB=1, else 0x00.
+  ; We need to check if MSB is 0. So if Acc (after AND) is 0.
+  EQ Acc r0         ; BranchFlag = 1 if (r3 & 0x80) == 0 (i.e., MSB of r3 is 0).
+  BRC MSB_IS_ZERO   ; If MSB is 0, perform shift and decrement exp.
+  JMP NORM_LOOP_BREAK ; Else (MSB is 1), break from loop.
+
+MSB_IS_ZERO:
+  ; int1 = int1 << 1'b1; (16-bit left shift for r3:r2)
+  ; Get MSB of r2 (int1_lo) to shift into LSB of r3 (int1_hi).
+  LWI 0           ; Acc = 0
+  ADD r2          ; Acc = r2
+  AND r7          ; Acc = r2 & 0x80. (r7 still holds 0x80)
+                  ; If MSB of r2 was 1, Acc = 0x80. Else Acc = 0.
+  BOR             ; Acc = |Acc. If Acc was 0x80, Acc becomes 1. Else 0.
+                  ; Acc now holds the bit to shift from r2 MSB to r3 LSB.
+  MOV r1      ; r1 = carry_bit_from_r2_msb (0 or 1)
+
+  ; r2 = r2 << 1
+  LWI 0           ; Acc = 0
+  ADD r2          ; Acc = r2
+  SLL 1           ; Acc = r2 << 1
+  MOV r2      ; r2 = r2 << 1
+
+  ; r3 = r3 << 1
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3
+  SLL 1           ; Acc = r3 << 1
+  ADD r1          ; Acc = (r3 << 1) | carry_bit_from_r2_msb
+  MOV r3      ; r3 = (r3 << 1) | carry_bit_from_r2_msb
+
+  ; exp--; (r4 = r4 - 1)
+  LWI 1           ; Acc = 1 (value to subtract)
+  MOV r1      ; r1 = 1
+  LWI 0           ; Acc = 0
+  ADD r4          ; Acc = r4 (exp)
+  SUB r1          ; Acc = r4 - 1
+  MOV r4      ; r4 = r4 - 1
+
+  JMP NORM_LOOP_ITERATE_NEXT ; Continue to next iteration part
+
+NORM_LOOP_BREAK: ; Caused by int1[15] == 1
+  ; Load address of NORM_LOOP_END into Acc, then JR
+  ; This requires knowing the address of NORM_LOOP_END.
+  ; For simplicity here, let's assume assembler handles JMP to a label.
+  ; If NORM_LOOP_END is far, this would need JR.
+  ; Let's assume NORM_LOOP_END is within JMP range for now.
+  ; If not, replace with: CALL_LOAD_ADDR_NORM_LOOP_END, JR
+  JMP NORM_LOOP_END
+
+NORM_LOOP_EXIT_CONDITION_MET: ; ct became 5, this was the last check.
+  JMP NORM_LOOP_END
+
+NORM_LOOP_ITERATE_NEXT:
+  ; ct-- (r5 = r5 - 1)
+  LWI 1           ; Acc = 1
+  MOV r1      ; r1 = 1
+  LWI 0           ; Acc = 0
+  ADD r5          ; Acc = r5 (ct)
+  SUB r1          ; Acc = r5 - 1
+  MOV r5      ; r5 = r5 - 1
+  ; Jump back to NORM_LOOP_TOP. This is a backward jump, must use JR.
+  ; Load address of NORM_LOOP_TOP into Acc.
+  CALL_LOAD_ADDR_NORM_LOOP_TOP
+  JR
+
+NORM_LOOP_END:
+  ; --- int1 = int1 << 1'b1; --- (Final shift after loop, regardless of trap or normal)
+  ; This is done in the Verilog 'else' block of 'if(trap)', so only for normal path.
+  ; The Verilog structure is:
+  ; if(!done) { if(sgn) abs(); if(trap){...} else {for loop; int1<<=1;} write_mem; done=1;}
+  ; So this final shift is part of the 'else' (normal) path.
+
+  ; Get MSB of r2 (int1_lo) to shift into LSB of r3 (int1_hi).
+  ; r7 still holds 0x80 from earlier.
+  LWI 0           ; Acc = 0
+  ADD r2          ; Acc = r2
+  AND r7          ; Acc = r2 & 0x80.
+  BOR             ; Acc = |Acc. (0 or 1)
+  MOV r1      ; r1 = carry_bit_from_r2_msb
+
+  LWI 0           ; Acc = 0
+  ADD r2          ; Acc = r2
+  SLL 1           ; Acc = r2 << 1
+  MOV r2      ; r2 = r2 << 1
+
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3
+  SLL 1           ; Acc = r3 << 1
+  ADD r1          ; Acc = (r3 << 1) | carry_bit_from_r2_msb
+  MOV r3      ; r3 = (r3 << 1) | carry_bit_from_r2_msb
+
+END_TRAP_HANDLING: ; Common point after trap or normal path's normalization.
+
+; --- {data_mem1.dm[3],data_mem1.dm[2]} = {sgn,exp[4:0],int1[15:6]}; ---
+; Output format: 16 bits total.
+; dm[3] (high byte) = {sgn (1), exp[4:0] (5), int1[15:14] (2 from r3 MSBs after all shifts)}
+; dm[2] (low byte)  = {int1[13:6] (8 from r3 next bits after all shifts)}
+
+; Construct dm[3] (output_hi_byte) in Acc
+; sgn is in r6 (0 or 1)
+; exp is in r4 (relevant 5 bits are exp[4:0])
+; int1 is r3:r2. We need int1[15:6] from the *final* int1.
+; int1[15:14] are MSB and MSB-1 of r3.
+; int1[13:6] are LSBs of r3.
+
+; output_hi_byte:
+; Bit 7: sgn (from r6)
+; Bit 6-2: exp[4:0] (from r4)
+; Bit 1-0: int1[15:14] (MSB two bits of r3)
+
+  LWI 0           ; Acc = 0 (start building output_hi_byte)
+  MOV r1      ; r1 = Acc (current output_hi_byte)
+
+  ; Add sgn (r6) to MSB (bit 7)
+  LWI 0           ; Acc = 0
+  ADD r6          ; Acc = sgn_flag (0 or 1)
+  SLL 7           ; Acc = sgn_flag << 7
+  OR r1           ; Acc = Acc | r1 (current_output_hi_byte)
+  MOV r1      ; r1 = Acc (current output_hi_byte with sgn)
+
+  ; Add exp[4:0] (from r4) into bits 6-2
+  ; Mask r4 to get only 5 LSBs (exp & 0x1F)
+  ; LOAD_CONST_ACC 31 (0x1F) into r7
+  LWI 7           ; Acc = 7
+  MOV r7      ; r7 = 7
+  LWI 3           ; Acc = 3
+  SLL 3           ; Acc = 24
+  ADD r7          ; Acc = 31
+  MOV r7      ; r7 = 0x1F (mask for exp[4:0])
+
+  LWI 0           ; Acc = 0
+  ADD r4          ; Acc = r4 (exp)
+  AND r7          ; Acc = exp & 0x1F (exp[4:0])
+  SLL 2           ; Acc = (exp[4:0]) << 2 (to align for bits 6-2)
+  OR r1           ; Acc = Acc | r1 (current_output_hi_byte)
+  MOV r1      ; r1 = Acc (current output_hi_byte with sgn, exp)
+
+  ; Add int1[15:14] (MSB two bits of r3) into bits 1-0
+  ; Get (r3 >> 6) to bring int1[15:14] to LSB positions.
+  ; ISA has SLL, not SRL. To do r3 >> 6:
+  ;   Acc = r3. SLL 2, then this is int1[7:2]. Not good.
+  ;   Alternative: Mask r3 with 0xC0 (11000000b), then shift.
+  ;   LOAD_CONST_ACC 192 (0xC0) into r7
+  LWI 0           ; Acc = 0
+  MOV r7      ; r7 = 0
+  LWI 3           ; Acc = 3
+  SLL 6           ; Acc = 192
+  ADD r7          ; Acc = 192
+  MOV r7      ; r7 = 0xC0 (mask for int1[15:14])
+
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3
+  AND r7          ; Acc = r3 & 0xC0 (gets int1[15:14] at MSB position)
+  ; Now need to shift this right by 6.
+  ; This is hard with only SLL.
+  ; Let's rebuild r3 bits manually if SRL is not easy.
+  ; int1[15] (MSB of r3): (r3 & 0x80) >> 7 (becomes 0 or 1) -> to bit 1 of output
+  ; int1[14] (MSB-1 of r3): (r3 & 0x40) >> 6 (becomes 0 or 1) -> to bit 0 of output
+
+  ; Get int1[15] (MSB of r3)
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3
+  AND r7          ; r7 was 0xC0, need 0x80. Reload r7 = 0x80
+  LWI 0           ; Acc = 0
+  MOV r7      ; r7 = 0
+  LWI 1           ; Acc = 1
+  SLL 7           ; Acc = 128
+  ADD r7          ; Acc = 128
+  MOV r7      ; r7 = 0x80
+  LWI 0           ; Acc = 0 ; re-get r3
+  ADD r3          ; Acc = r3
+  AND r7          ; Acc = r3 & 0x80
+  BOR             ; Acc = (0 or 1 for int1[15])
+  SLL 1           ; Acc = (int1[15]) << 1 (to place in bit 1 of output_hi_byte)
+  OR r1           ; Acc = Acc | r1 (current_output_hi_byte)
+  MOV r1      ; r1 = Acc
+
+  ; Get int1[14] (MSB-1 of r3)
+  ; LOAD_CONST_ACC 64 (0x40) into r7
+  LWI 0           ; Acc = 0
+  MOV r7      ; r7 = 0
+  LWI 1           ; Acc = 1
+  SLL 6           ; Acc = 64
+  ADD r7          ; Acc = 64
+  MOV r7      ; r7 = 0x40
+  LWI 0           ; Acc = 0 ; re-get r3
+  ADD r3          ; Acc = r3
+  AND r7          ; Acc = r3 & 0x40
+  BOR             ; Acc = (0 or 1 for int1[14])
+                  ; This is already in bit 0 position if we consider it as value 0 or 1.
+  OR r1           ; Acc = Acc | r1 (current_output_hi_byte)
+  ; Acc now holds dm[3] content.
+
+  ; Store Acc (dm[3] content) to memory address ADDR_DM_3 (3)
+  MOV r7      ; r7 = dm[3] content
+  LWI 3           ; Acc = 3 (address)
+  MOV r1      ; r1 = address 3
+  LWI 0           ; Acc = 0
+  ADD r7          ; Acc = dm[3] content (to be stored)
+  STR r1          ; MEM[r1] = Acc
+
+; Construct dm[2] (output_low_byte) in Acc
+; dm[2] = {int1[13:6]} (8 LSBs of r3, after masking off top 2 bits)
+; Mask r3 with 0x3F (00111111b)
+  ; LOAD_CONST_ACC 63 (0x3F) into r7
+  LWI 7           ; Acc = 7
+  MOV r7      ; r7 = 7
+  LWI 7           ; Acc = 7
+  SLL 3           ; Acc = 56
+  ADD r7          ; Acc = 63
+  MOV r7      ; r7 = 0x3F (mask for int1[13:6])
+
+  LWI 0           ; Acc = 0
+  ADD r3          ; Acc = r3
+  AND r7          ; Acc = r3 & 0x3F. This is int1[13:6].
+  ; Acc now holds dm[2] content.
+
+  ; Store Acc (dm[2] content) to memory address ADDR_DM_2 (2)
+  MOV r7      ; r7 = dm[2] content
+  LWI 2           ; Acc = 2 (address)
+  MOV r1      ; r1 = address 2
+  LWI 0           ; Acc = 0
+  ADD r7          ; Acc = dm[2] content (to be stored)
+  STR r1          ; MEM[r1] = Acc
+
+; --- done = '1; ---
+; Signal completion. For this ISA, we can jump to a HALT state.
+  JMP HALT_STATE
+
+; --- Helper: Load address of NORM_LOOP_TOP for JR ---
+; This is a pseudo-subroutine. It would be expanded by an assembler.
+; Actual address needs to be known. For this example, let's say NORM_LOOP_TOP is at address 50.
+; This demonstrates loading a constant address > 7.
+CALL_LOAD_ADDR_NORM_LOOP_TOP:
+  ; LOAD_CONST_ACC address_of_NORM_LOOP_TOP
+  ; Example: if NORM_LOOP_TOP is at address 50 (00110010b)
+  LWI 2           ; Acc = 2 (0b010)
+  MOV r1      ; r1 = 2
+  LWI 3           ; Acc = 3 (0b011)
+  SLL 4           ; Acc = 48 (0b0110000)
+  ADD r1          ; Acc = 48 + 2 = 50
+  JR              ; This JR is unconventional here. This sequence should be INLINED before the JR.
+                  ; Correct usage:
+                  ; ... (at point of needing to JR to NORM_LOOP_TOP)
+                  ; LWI 2
+                  ; MOV r1
+                  ; LWI 3
+                  ; SLL 4
+                  ; ADD r1 ; Acc now holds address of NORM_LOOP_TOP
+                  ; JR
+                  ;
+                  ; For now, this label is just a placeholder for the sequence.
+                  ; The jump from NORM_LOOP_ITERATE_NEXT will inline this.
+
+HALT_STATE:
+  JMP HALT_STATE  ; Infinite loop to signify program completion.
+
+; Note: The CALL_LOAD_ADDR_NORM_LOOP_TOP is a conceptual placeholder.
+; The actual code for loading the address of NORM_LOOP_TOP must be inlined before the JR instruction
+; in NORM_LOOP_ITERATE_NEXT. The assembler would calculate the actual address of NORM_LOOP_TOP.
+; For instance, if NORM_LOOP_TOP is at address, say, 100:
+; NORM_LOOP_ITERATE_NEXT:
+;   ... (decrement r5)
+;   ; Load 100 into Acc for JR to NORM_LOOP_TOP
+;   LWI 4       ; Acc = 4
+;   MOV r1  ; r1 = 4 (for 100 = 64+32+4)
+;   LWI 1       ; Acc = 1
+;   SLL 5       ; Acc = 32
+;   ADD r1      ; Acc = 36
+;   MOV r1  ; r1 = 36
+;   LWI 1       ; Acc = 1
+;   SLL 6       ; Acc = 64
+;   ADD r1      ; Acc = 100
+;   JR          ; Jump to NORM_LOOP_TOP
