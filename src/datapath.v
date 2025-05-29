@@ -13,7 +13,7 @@ module datapath(
     input  wire        ALUSrc,
     input  wire        RegWrite,
     input  wire [1:0]  Jump,
-    input  wire [2:0]  ALUControl,
+    input  wire [3:0]  ALUControl,
     input  wire [2:0]  AccControl,
     input  wire [8:0]  inst,
     input  wire [7:0] ReadData,

@@ -12,7 +12,7 @@ module controller(
 	output wire ALUSrc,
 	output wire RegWrite,
 	output wire[1:0] Jump,
-  	output wire[2:0] ALUControl,
+  	output wire[3:0] ALUControl,
 
   	output wire[2:0] AccControl
     );

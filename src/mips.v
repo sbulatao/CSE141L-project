@@ -11,7 +11,7 @@ module mips(
 	output wire[7:0] ALUOut,
     output wire[7:0] rd2_Data
     );
-	
+
     wire [5:0] op;
     wire BranchFlag;
     wire overflow;
@@ -20,7 +20,7 @@ module mips(
     wire ALUSrc;
     wire RegWrite;
     wire [1:0] Jump;
-    wire [2:0] ALUControl;
+    wire [3:0] ALUControl;
     wire [2:0] AccControl;
 
 	assign op = inst[8:3];
