@@ -89,6 +89,13 @@ class Assembler:
         opcode = "000011"
         return opcode + rs
 
+    def encode_XOR(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 2 and instruction_parts[1].upper() in self.registers):
+            raise ValueError(f"Syntax error in OR instruction at line {line_num}: { ' '.join(instruction_parts)}")
+        rs = self.registers[instruction_parts[1].upper()]
+        opcode = "000100"
+
+        return opcode + rs
     def encode_BAN(self, instruction_parts, line_num, pc):
         if not (len(instruction_parts) == 1):
             raise ValueError(f"Syntax error in BAN instruction at line {line_num}: { ' '.join(instruction_parts)}")
@@ -145,6 +152,16 @@ class Assembler:
             raise ValueError(f"Immediate value out of bounds (0-7) for LWI at line {line_num}: {imm_val}")
         imm = bin(imm_val)[2:].zfill(3)
         opcode = "010010"
+        return opcode + imm
+
+    def encode_XORI(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 2 and instruction_parts[1].isdigit()):
+            raise ValueError(f"Syntax error in SUBI instruction at line {line_num}: { ' '.join(instruction_parts)}")
+        imm_val = int(instruction_parts[1])
+        if not (0 <= imm_val <= 7): # Assuming 3-bit immediate
+            raise ValueError(f"Immediate value out of bounds (0-7) for SUBI at line {line_num}: {imm_val}")
+        imm = bin(imm_val)[2:].zfill(3)
+        opcode = "010011"
         return opcode + imm
 
     def encode_BRC(self, instruction_parts, line_num, current_instruction_pc):
@@ -234,6 +251,8 @@ class Assembler:
             return self.encode_AND(parts, line_num, current_instruction_pc)
         elif opcode_name == "OR":
             return self.encode_OR(parts, line_num, current_instruction_pc)
+        elif opcode_name == "XOR":
+            return self.encode_XOR(parts, line_num, current_instruction_pc)
         elif opcode_name == "BAN":
             return self.encode_BAN(parts, line_num, current_instruction_pc)
         elif opcode_name == "BOR":
@@ -248,6 +267,8 @@ class Assembler:
             return self.encode_SUBI(parts, line_num, current_instruction_pc)
         elif opcode_name == "LWI":
             return self.encode_LWI(parts, line_num, current_instruction_pc)
+        elif opcode_name == "XORI":
+            return self.encode_XORI(parts, line_num, current_instruction_pc)
         elif opcode_name == "BRC":
             return self.encode_BRC(parts, line_num, current_instruction_pc)
         elif opcode_name == "SLL":
