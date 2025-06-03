@@ -4,7 +4,6 @@ module maindec(
 	output wire MemWrite,
 	output wire Branch,
 	output wire ALUSrc,
-	output wire RegDst,
 	output wire RegWrite,
 	output wire [1:0] Jump,
 	output wire [1:0] ALUOp
