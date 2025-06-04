@@ -17,8 +17,8 @@ module maindec(
 			3'b000:controls <= 9'b10000_00_00;	//SGR
 			3'b001:begin						//SSR
 				case (op[2:0])
-					3'b000:controls <= 9'b11001_00_00;	//LWR
-					3'b001:controls <= 9'b0101x_00_00;	//STR
+					3'b000:controls <= 9'b10001_00_00;	//LWR
+					3'b001:controls <= 9'b0001x_00_00;	//STR
 					3'b010:controls <= 9'b0000x_00_00;	//BRC
 					default:controls<= 9'b11111_11_11;	//illegal
 				endcase
