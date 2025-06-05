@@ -45,7 +45,7 @@
 
 ## Internal Operands
 
-- **General Purpose Registers**: 8-bit `r0` to `r7` (with `r0` hardwired to 8'b0)
+- **General Purpose Registers**: 8-bit `r0` to `r7`
 - **Special Purpose Registers**: 
   - 8-bit `acc` (Accumulator)
   - 8-bit `BranchFlag` (Used for conditional branching)
