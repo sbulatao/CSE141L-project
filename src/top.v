@@ -20,7 +20,7 @@ module top(
 
     assign internal_rst = rst | ~start;
 
-    assign done = (pc == 8'hFF);
+    assign done = (pc == 8'hFF);    // just an example
 
     mips mips_u (
         .clk(clk),
