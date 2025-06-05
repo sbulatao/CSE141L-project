@@ -1,5 +1,31 @@
 import re
 
+'''
+grammar:
+1. Case insensitive for all instructions, registers and labels
+2. Use ; in front of the comments
+3. Allow blank lines
+4. Use single or multiple blankspaces between instruction, register and immediate number
+5. Do not use punctuations except comments
+6. Put label on a separate line and end it with a colon
+
+An example:
+LWI 7	; ACC=7
+MOV R1	; R1=7
+LWI 3	; ACC=3
+MOV  r2	; R2=3
+LWI 2	; ACC=2
+; begin computation
+LABEL1:
+XOR R1	; ACC=8'B0000_0010^8'B0000_0111=8'B0000_0101
+XORI 6	; ACC=8'B0000_0101^8'B0000_0110=8'B0000_0011
+SLL 6	; ACC=8'B1100_0000
+STR R1	; MEM(R1)=MEM(8'B0000_0111)=8'B1100_0000
+LWI 0	; CLEAR ACC=0
+LWR R1	; ACC=MEM(R1)=MEM(8'B0000_0111)=8'B1100_0000
+LWI 0	; CLEAR ACC=0
+'''
+
 class Assembler:
     def __init__(self):
         self.registers = {  # general purpose registers
