@@ -1,4 +1,4 @@
-; R0=0/1
+  ; R0=0/1
 ; R1=GENERAL
 ; R2=DATA_LOW_ADDR, DATA_LOW
 ; R3=DATA_HIGH_ADDR, DATA_HIGH
@@ -124,7 +124,7 @@ EQ R7 R0
 BRC EXP_mins_1		; if(INT1[15]==0), continue
 LWI 1   ; ACC=1		; else, jump to LABEL_FINISH
 SLL 7   ; ACC=1<<7=128
-ADDI 1	; ACC=129
+ADDI 2	; ACC=130
 JR
 
 EXP_mins_1:		; PC=85
