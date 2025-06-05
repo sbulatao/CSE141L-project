@@ -9,7 +9,7 @@ module mips(
     output wire[7:0] pc,
 	output wire     MemWrite,
 	output wire[7:0] ALUOut,
-    output wire[7:0] rd2_Data
+    output wire[7:0] SrcA
     );
 
     wire [5:0] op;
@@ -54,7 +54,7 @@ module mips(
         .BranchFlag(BranchFlag),
         .pc(pc),
         .ALUOut(ALUOut),
-        .rd2_Data(rd2_Data)
+        .SrcA(SrcA)
     );
 
 	

@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 
 module tb_top;
 
@@ -47,8 +47,8 @@ module tb_top;
         start = 1;
 
         // Wait until done or timeout
-        wait(done);
-        #20;
+        //wait(done);
+        #600;
 
         // Finish simulation
         $finish;

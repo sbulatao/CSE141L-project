@@ -12,7 +12,7 @@ module top(
     wire   [7:0]       pc;
     wire   [8:0]       inst;
     wire   [7:0]       ReadData;
-    wire   [7:0]       rd2_Data;
+    wire   [7:0]       SrcA;
     wire   [7:0]       ALUOut;
     wire               MemWrite;
 
@@ -30,7 +30,7 @@ module top(
         .pc(pc),
         .MemWrite(MemWrite),
         .ALUOut(ALUOut),
-        .rd2_Data(rd2_Data)
+        .SrcA(SrcA)
     );
 
     instmem imem(
@@ -43,7 +43,7 @@ module top(
         .clk(~clk),
         .MemWrite(MemWrite),
         .DataAddr(ALUOut),
-        .DataIn(rd2_Data),
+        .DataIn(SrcA),
         .DataOut(ReadData)
     );
 

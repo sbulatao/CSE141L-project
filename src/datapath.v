@@ -21,7 +21,7 @@ module datapath(
     output wire        BranchFlag,
     output wire [7:0]  pc,
     output wire [7:0] ALUOut,
-    output wire [7:0] rd2_Data
+    output wire [7:0] SrcA
 );
 
     wire [4:0]  writereg;
@@ -32,8 +32,8 @@ module datapath(
     wire [7:0]  pcBranch;
     wire [7:0]  SignImm;
     wire [7:0]  SignImmShift;
-    wire [7:0]  SrcA;
     wire [7:0]  SrcB;
+	wire [7:0]  rd2_Data; 
     wire [7:0]  result;
     wire BranchFlag_r;
 
