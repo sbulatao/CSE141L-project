@@ -8,9 +8,9 @@
 
 | Type | Format                      | Corresponding Instructions       |
 |------|-----------------------------|----------------------------------|
-| SR   | 6-bit op, 3-bit rs          | ADD, SUB, AND, OR, BAN, BOR      |
+| SR   | 6-bit op, 3-bit rs          | ADD, SUB, AND, OR, XOR, BAN, BOR |
 | LS   | 6-bit op, 3-bit rs          | LWR, STR                         |
-| SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, BRC, SLL        |
+| SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, XORI, BRC, SLL  |
 | DR   | 3-bit op, 3-bit rs, 3-bit rt| EQ                               |
 | GR   | 3-bit op, 3-bit imm         | MOV                              |
 | J    | 3-bit op, 6-bit target      | JR JMP                           |
@@ -25,6 +25,7 @@
 | SUB | SR | 000001_xxx<br>6-bit op=000001<br>3-bit rs =xxx | 000001_010<br># Assume Acc = 0000_0011<br># Assume rf[010] = 0000_0001<br># After SUB, Acc = 0000_0010 | Acc = Acc - rs |
 | AND | SR | 000010_xxx<br>6-bit op=000010<br>3-bit rs =xxx | 000010_011<br># Assume Acc = 1100_1100<br># Assume rf[011] = 1010_1010<br># After AND, Acc = 1000_1000 | Acc = Acc & rs |
 | OR | SR | 000011_xxx<br>6-bit op=000011<br>3-bit rs =xxx | 000011_010<br># Assume Acc = 0000_0100<br># Assume rf[010] = 0000_0010<br># After OR, Acc = 0000_0110 | Acc = Acc \| rs |
+| XOR | SR | 000100_xxx<br>6-bit op=000100<br>3-bit rs =xxx | 000100_010<br># Assume Acc = 0000_1111<br># Assume rf[010] = 0000_0010<br># After XOR, Acc = 0000_1101 | Acc = Acc ^ rs |
 | BAN | SR | 000101_xxx<br>6-bit op=000101<br>3-bit xxx are useless | 000101_xxx<br># Assume Acc = 1010_1010<br># After BAN, Acc = 0000_0000 | Acc = &Acc |
 | BOR | SR | 000110_xxx<br>6-bit op=000110<br>3-bit xxx are useless | 000110_xxx<br># Assume Acc = 1010_0000<br># After BOR, Acc = 0000_0001 | Acc = \|Acc |
 | LWR | LS | 001000_xxx<br>6-bit op=001000<br>3-bit rs =xxx | 001000_001<br># Assume MEM(rf[001]) = 0101_0101<br># After LWR, Acc = 0101_0101 | Acc = MEM(rs) |
@@ -32,6 +33,7 @@
 | ADDI | SI | 010000_xxx<br>6-bit op=010000<br>3-bit imm = xxx | 010000_100<br># Assume Acc = 0000_0010<br># imm = 100<br># After ADDI, Acc = 0000_0110 | Acc = Acc + imm |
 | SUBI | SI | 010001_xxx<br>6-bit op=010001<br>3-bit imm = xxx | 010001_010<br># Assume Acc = 0000_0110<br># imm = 010<br># After SUBI, Acc = 0000_0100 | Acc = Acc - imm |
 | LWI | SI | 010010_xxx<br>6-bit op=010010<br>3-bit imm = xxx | 010010_111<br># Assume Acc = 0000_0000<br># imm = 111<br># After LWI, Acc = 0000_0111 | Acc = imm |
+| XORI| SI | 010011_xxx<br>6-bit op=010011<br>3-bit imm = xxx | 010011_111<br># Assume Acc = 0000_1110<br># imm = 100<br># After XORI, Acc = 0000_1010 | Acc = ACC ^ imm |
 | BRC | SI | 010101_xxx<br>6-bit op=010101<br>3-bit imm = xxx | 010101_010<br># Assume BranchFlag = 1<br># offset = 010<br># Then PC = PC + 1 + 2 | if(BranchFlag == 1) PC = PC + 1 + imm |
 | SLL | SI | 010111_xxx<br>6-bit op=010111<br>3-bit imm = xxx | 010011_010<br># Assume Acc = 0000_0010<br># imm = 010<br># After SLL, Acc = 0000_1000 | Acc = Acc << imm |
 | EQ | DR | 100_xxx_yyy<br>3-bit op = 100<br>3-bit rs = xxx<br>3-bit rt = yyy | 100_101_100<br># rs = 101<br># rt = 100<br># rf[101] == rf[100]<br># BranchFlag = 1 | if(rs == rt) BranchFlag = 1 |
