@@ -7,7 +7,7 @@ grammar:
 3. Allow blank lines
 4. Use single or multiple blankspaces between instruction, register and immediate number
 5. Do not use punctuations except comments and labels
-6. Put label on a separate line and end it with a colon. Underbar is allowed.
+6. Put label on a separate line and end it with a colon.
 
 An example:
 LWI 7	; ACC=7
