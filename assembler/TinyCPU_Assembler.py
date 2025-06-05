@@ -7,7 +7,7 @@ grammar:
 3. Allow blank lines
 4. Use single or multiple blankspaces between instruction, register and immediate number
 5. Do not use punctuations except comments and labels
-6. Put label on a separate line and end it with a colon
+6. Put label on a separate line and end it with a colon. Underbar is allowed.
 
 An example:
 LWI 7	; ACC=7
@@ -16,7 +16,7 @@ LWI 3	; ACC=3
 MOV  r2	; R2=3
 LWI 2	; ACC=2
 ; begin computation
-LABEL1:
+LABEL_1:
 XOR R1	; ACC=8'B0000_0010^8'B0000_0111=8'B0000_0101
 XORI 6	; ACC=8'B0000_0101^8'B0000_0110=8'B0000_0011
 SLL 6	; ACC=8'B1100_0000
