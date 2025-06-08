@@ -209,6 +209,17 @@ class Assembler:
         opcode = "010101"
         return opcode + offset_bin
 
+    def encode_SRL(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 2 and instruction_parts[1].isdigit()):
+            raise ValueError(f"Syntax error in SLL instruction at line {line_num}: { ' '.join(instruction_parts)}")
+        imm_val = int(instruction_parts[1])
+        if not (0 <= imm_val <= 7): # Assuming 3-bit immediate
+            raise ValueError(f"Immediate value out of bounds (0-7) for SLL at line {line_num}: {imm_val}")
+        imm = bin(imm_val)[2:].zfill(3)
+        opcode = "010110"
+        return opcode + imm
+
+
     def encode_SLL(self, instruction_parts, line_num, pc):
         if not (len(instruction_parts) == 2 and instruction_parts[1].isdigit()):
             raise ValueError(f"Syntax error in SLL instruction at line {line_num}: { ' '.join(instruction_parts)}")
@@ -297,6 +308,8 @@ class Assembler:
             return self.encode_XORI(parts, line_num, current_instruction_pc)
         elif opcode_name == "BRC":
             return self.encode_BRC(parts, line_num, current_instruction_pc)
+        elif opcode_name == "SRL":
+            return self.encode_SRL(parts, line_num, current_instruction_pc)
         elif opcode_name == "SLL":
             return self.encode_SLL(parts, line_num, current_instruction_pc)
         elif opcode_name == "EQ":
