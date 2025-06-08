@@ -21,6 +21,7 @@ module alu(
             4'b0101: y = &b;		// &()
             4'b0110: y = |b;		// |()
             4'b0111: y = a << b;	// <<
+            4'b1001: y = a >> b;    // >>
             4'b1000: y = a^ b;      // xor
             default: y = 8'b0;
         endcase

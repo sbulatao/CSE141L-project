@@ -47,8 +47,8 @@ module tb_top;
         start = 1;
 
         // Wait until done or timeout
-        //wait(done);
-        #600;
+        wait(done);
+        //#1000;
 
         // Finish simulation
         $finish;

@@ -41,7 +41,7 @@ module regfile(
                 rd2_temp <= acc;
             end
 
-            2'b10: begin			// for ADD(I) SUB(I) AND OR SLL LWI BRC STR
+            2'b10: begin			// for ADD(I) SUB(I) AND OR XOR SLL LWI BRC STR
                 rd1_temp <= acc;
                 rd2_temp <= rf[ra2];
             end
