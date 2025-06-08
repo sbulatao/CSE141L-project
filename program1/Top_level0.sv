@@ -31,7 +31,9 @@ module TopLevel0 (
 	  int1    = {data_mem1.dm[1],data_mem1.dm[0]};
 	  sgn     = int1[15];               // two's comp MSB also works as fl pt sign bit
 	  trap    = !int1[14:0];            // trap 0 or 16'h8000) 
-    exp     = 6'd22;			   	    // biased exponent starting value = 6 + 15
+    // Revised by Runyang
+    // exp     = 6'd22;			   	    // biased exponent starting value = 6 + 15
+    exp     = 6'd21;			   	    // biased exponent starting value = 6 + 15
 	  done    = 1'b0;
     end
 	else if(!done) begin	   :nonreset
