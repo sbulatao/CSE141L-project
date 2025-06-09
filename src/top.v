@@ -15,12 +15,12 @@ module top(
     wire   [7:0]       SrcA;
     wire   [7:0]       ALUOut;
     wire               MemWrite;
-
+    wire               overflow;
     wire               internal_rst;
 
     assign internal_rst = rst | ~start;
 
-  assign done = (pc == 8'd190);    // just an example
+  assign done = (pc == 8'd255);    // just an example
 
     mips mips_u (
         .clk(clk),
@@ -30,7 +30,8 @@ module top(
         .pc(pc),
         .MemWrite(MemWrite),
         .ALUOut(ALUOut),
-        .SrcA(SrcA)
+        .SrcA(SrcA),
+        .overflow(overflow)
     );
 
     instmem imem(

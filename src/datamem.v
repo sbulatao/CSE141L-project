@@ -9,8 +9,8 @@ module datamem(
   reg [7:0] dm [255:0];
 
   initial begin
-    dm[0] = 8'b0000_0100;
-    dm[1] = 8'b0011_1100;
+    dm[0] = 8'b1100_1010;	// low
+    dm[1] = 8'b0000_0000;	// high
   end
 
   always@(posedge clk) begin

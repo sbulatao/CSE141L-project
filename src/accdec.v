@@ -17,8 +17,8 @@ module accdec(
 		case (op[5:3])
 			3'b000: begin 
 				case (op[2:0])
-					3'b000,3'b001,3'b010,3'b011,3'b100: AccControl <= 3'b010;	// model2: acc = acc +-&| rs SR
-					3'b101,3'b110, 3'b110: AccControl <= 3'b001;		// model1: acc = &|(acc)	 SR
+					3'b000,3'b001,3'b010,3'b011,3'b100, 3'b111: AccControl <= 3'b010;	// model2: acc = acc +-&| rs SR
+					3'b101,3'b110: AccControl <= 3'b001;		// model1: acc = &|(acc)	 SR
 				endcase
 			end
 			3'b001: begin
