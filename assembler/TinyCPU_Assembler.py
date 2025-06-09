@@ -94,9 +94,9 @@ class Assembler:
         opcode = "000000"
         return opcode + rs
 
-    def encode_SUB(self, instruction_parts, line_num, pc):
+    def encode_SRLR(self, instruction_parts, line_num, pc):
         if not (len(instruction_parts) == 2 and instruction_parts[1].upper() in self.registers):
-            raise ValueError(f"Syntax error in SUB instruction at line {line_num}: { ' '.join(instruction_parts)}")
+            raise ValueError(f"Syntax error in SRLR instruction at line {line_num}: { ' '.join(instruction_parts)}")
         rs = self.registers[instruction_parts[1].upper()]
         opcode = "000001"
         return opcode + rs
@@ -134,6 +134,13 @@ class Assembler:
             raise ValueError(f"Syntax error in BOR instruction at line {line_num}: { ' '.join(instruction_parts)}")
         rs = "000"
         opcode = "000110"
+        return opcode + rs
+
+    def encode_SLLR(self, instruction_parts, line_num, pc):
+        if not (len(instruction_parts) == 2 and instruction_parts[1].upper() in self.registers):
+            raise ValueError(f"Syntax error in SLLR instruction at line {line_num}: { ' '.join(instruction_parts)}")
+        rs = self.registers[instruction_parts[1].upper()]
+        opcode = "000111"
         return opcode + rs
 
     def encode_LWR(self, instruction_parts, line_num, pc):
@@ -282,8 +289,8 @@ class Assembler:
 
         if opcode_name == "ADD":
             return self.encode_ADD(parts, line_num, current_instruction_pc)
-        elif opcode_name == "SUB":
-            return self.encode_SUB(parts, line_num, current_instruction_pc)
+        elif opcode_name == "SRLR":
+            return self.encode_SRLR(parts, line_num, current_instruction_pc)
         elif opcode_name == "AND":
             return self.encode_AND(parts, line_num, current_instruction_pc)
         elif opcode_name == "OR":
@@ -294,6 +301,8 @@ class Assembler:
             return self.encode_BAN(parts, line_num, current_instruction_pc)
         elif opcode_name == "BOR":
             return self.encode_BOR(parts, line_num, current_instruction_pc)
+        elif opcode_name == "SLLR":
+            return self.encode_SLLR(parts, line_num, current_instruction_pc)
         elif opcode_name == "LWR":
             return self.encode_LWR(parts, line_num, current_instruction_pc)
         elif opcode_name == "STR":
