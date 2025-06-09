@@ -10,7 +10,7 @@
 |------|-----------------------------|----------------------------------|
 | SR   | 6-bit op, 3-bit rs<br>6-bit op, 3-bit don't care | ADD, SRLR, SLLR, AND, OR, XOR<br>BAN, BOR |
 | LS   | 6-bit op, 3-bit rs          | LWR, STR                         |
-| SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, XORI, BRC, SRL, SLL |
+| SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, BRC, SRL, SLL |
 | DR   | 3-bit op, 3-bit rs, 3-bit rt| EQ                               |
 | GR   | 3-bit op, 3-bit don't care, 3-bit imm         | MOV            |
 | J    | 3-bit op, 6-bit target      | JR JMP                           |
