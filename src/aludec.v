@@ -7,14 +7,14 @@ module aludec(
 		case (ALUOp)
 			2'b00: begin
 				case (FunctBit)
-					4'b0000: ALUControl <= 4'b0000; //add 
-					4'b0001: ALUControl <= 4'b1001; //>>
+					4'b0000: ALUControl <= 4'b0000; //add
+					4'b0001: ALUControl <= 4'b0001; //sub
 					4'b0010: ALUControl <= 4'b0010; //and
 					4'b0011: ALUControl <= 4'b0011; //or
 					4'b0100: ALUControl <= 4'b1000;	//xor
 					4'b0101: ALUControl <= 4'b0101; //and()
 					4'b0110: ALUControl <= 4'b0110; //or()
-					4'b0111: ALUControl <= 4'b0111; //<<
+					4'b0111: ALUControl <= 4'b1001; //>>
 					4'b1000, 4'b1001: ALUControl <= 4'b100;	//pass (don't need alu)
 				endcase
 			end
