@@ -8,7 +8,7 @@
 
 | Type | Format                      | Corresponding Instructions       |
 |------|-----------------------------|----------------------------------|
-| SR   | 6-bit op, 3-bit rs<br>6-bit op, 3-bit don't care | ADD, SUB, SRLR, AND, OR, XOR<br>BAN, BOR |
+| SR   | 6-bit op, 3-bit rs<br>6-bit op, 3-bit don't care | ADD, SUB, AND, OR, XOR, SRLR<br>BAN, BOR |
 | LS   | 6-bit op, 3-bit rs          | LWR, STR                         |
 | SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, BRC, SRL, SLL |
 | DR   | 3-bit op, 3-bit rs, 3-bit rt| EQ                               |
