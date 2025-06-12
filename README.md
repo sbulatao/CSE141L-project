@@ -8,7 +8,7 @@
 
 | Type | Format                      | Corresponding Instructions       |
 |------|-----------------------------|----------------------------------|
-| SR   | 6-bit op, 3-bit rs<br>6-bit op, 3-bit don't care | ADD, SRLR, SLLR, AND, OR, XOR<br>BAN, BOR |
+| SR   | 6-bit op, 3-bit rs<br>6-bit op, 3-bit don't care | ADD, SUB, SRLR, AND, OR, XOR<br>BAN, BOR |
 | LS   | 6-bit op, 3-bit rs          | LWR, STR                         |
 | SI   | 6-bit op, 3-bit imm         | ADDI, SUBI, LWI, BRC, SRL, SLL |
 | DR   | 3-bit op, 3-bit rs, 3-bit rt| EQ                               |
@@ -22,13 +22,13 @@
 | NAME | TYPE | BIT BREAKDOWN | EXAMPLE | NOTES |
 |------|------|----------------|---------|-------|
 | ADD | SR | 000000_xxx<br>6-bit op=000000<br>3-bit rs =xxx | 000000_001<br># Assume Acc = 0000_0010<br># Assume rf[001] = 0000_0001<br># After ADD, Acc = 0000_0011 | Acc = Acc + rs |
-| SRLR | SR | 000001_xxx<br>6-bit op=000001<br>3-bit rs =xxx | 000001_010<br># Assume Acc = 0000_0011<br># Assume rf[010] = 0000_0001<br># After SRLR, Acc = 0000_0001 | Acc = Acc >> rs |
+| SUB | SR | 000001_xxx<br>6-bit op=000001<br>3-bit rs =xxx | 000001_010<br># Assume Acc = 0000_0011<br># Assume rf[010] = 0000_0001<br># After SUB, Acc = 0000_0010 | Acc = Acc - rs |
 | AND | SR | 000010_xxx<br>6-bit op=000010<br>3-bit rs =xxx | 000010_011<br># Assume Acc = 1100_1100<br># Assume rf[011] = 1010_1010<br># After AND, Acc = 1000_1000 | Acc = Acc & rs |
 | OR | SR | 000011_xxx<br>6-bit op=000011<br>3-bit rs =xxx | 000011_010<br># Assume Acc = 0000_0100<br># Assume rf[010] = 0000_0010<br># After OR, Acc = 0000_0110 | Acc = Acc \| rs |
 | XOR | SR | 000100_xxx<br>6-bit op=000100<br>3-bit rs =xxx | 000100_010<br># Assume Acc = 0000_1111<br># Assume rf[010] = 0000_0010<br># After XOR, Acc = 0000_1101 | Acc = Acc ^ rs |
 | BAN | SR | 000101_xxx<br>6-bit op=000101<br>3-bit xxx are useless | 000101_xxx<br># Assume Acc = 1010_1010<br># After BAN, Acc = 0000_0000 | Acc = &Acc |
 | BOR | SR | 000110_xxx<br>6-bit op=000110<br>3-bit xxx are useless | 000110_xxx<br># Assume Acc = 1010_0000<br># After BOR, Acc = 0000_0001 | Acc = \|Acc |
-| SLLR | SR | 000111_xxx<br>6-bit op=000111<br>3-bit rs =xxx | 000111_010<br># Assume Acc = 0000_0010<br># Assume rf[010] = 0000_0011<br># After SLLR, Acc = 0001_0000 | Acc = Acc << rs |
+| SRLR | SR | 000111_xxx<br>6-bit op=000111<br>3-bit rs =xxx | 000111_010<br># Assume Acc = 0011_0000<br># Assume rf[010] = 0000_0011<br># After SLLR, Acc = 0000_0110 | Acc = Acc >> rs |
 | LWR | LS | 001000_xxx<br>6-bit op=001000<br>3-bit rs =xxx | 001000_001<br># Assume MEM(rf[001]) = 0101_0101<br># After LWR, Acc = 0101_0101 | Acc = MEM(rs) |
 | STR | LS | 001001_xxx<br>6-bit op=001001<br>3-bit rs =xxx | 001001_001<br># Assume Acc = 0000_1010<br># After STR, MEM(rf[001]) = 0000_1010 | MEM(rs) = Acc |
 | ADDI | SI | 010000_xxx<br>6-bit op=010000<br>3-bit imm = xxx | 010000_100<br># Assume Acc = 0000_0010<br># imm = 100<br># After ADDI, Acc = 0000_0110 | Acc = Acc + imm |
