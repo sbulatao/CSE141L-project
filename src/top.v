@@ -42,8 +42,8 @@ module top(
 
     datamem dmem(
         .clk(~clk),
-        .MemWrite(MemWrite),
         .DataAddr(ALUOut),
+        .MemWrite(MemWrite),
         .DataIn(SrcA),
         .DataOut(ReadData)
     );
