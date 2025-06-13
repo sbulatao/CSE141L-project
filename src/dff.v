@@ -1,4 +1,4 @@
-module my_dff #( // change to my_dff since quartus complained
+module dff #(
 	parameter WIDTH = 8
 )(
 	input wire clk,
