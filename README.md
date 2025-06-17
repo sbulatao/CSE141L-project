@@ -52,4 +52,23 @@
   - 8-bit `BranchFlag` (Used for conditional branching)
   - 8-bit `pc` (Program Counter)
 
+## Simulation Guidance
+- **Simulation
+  - We just use EDAPlayground as simulator.
+  - Upload the /program1/new_int2flt_tb.sv into the testbench section to be the testbench.sv file.
+  - Upload /src/top.v into design section to be the design.sv file. Upload /program1/new_int2flt_tb.sv and all other programs in the /src/* except top_tb.v into the design section.
+  - Select IVerilog as simulator, finally you can run the test.
+- **Use the assembler to assembly your own assembly code.
+  - Upload the assembly program and name it source_assembly.txt, strictly follow the grammar.
+  - Run python program /assembler/TinyCPU_Assembler.py, the machine code will be updated in inst.txt.
+  - Replace the /src/inst.txt with the updated /assembler/inst.txt
+  - Now you can do simulation work.
+- **assembly code grammar
+  - Case insensitive for all instructions, registers and labels
+  - Use ; in front of the comments
+  - Allow blank lines
+  - Use single or multiple blankspaces between instruction, register and immediate number
+  - Do not use punctuations except comments and labels
+  - Put label on a separate line and end it with a colon.
+
 ---
