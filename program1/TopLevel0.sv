@@ -6,23 +6,27 @@ module TopLevel0 (
   input        clk, 
                reset, 				    // master reset -- start at beginning 
                start,                   // request -- start next conversion
-  output logic done);				    // your acknowledge back to the testbench --ready for next operation
-//   logic        nil;					    // zero trap
-//   logic        max_neg;                 // 16'h8000 trap
-//   logic[ 7:0]  ctr;					    // clock cycle downcounter
+  output logic done
+  );				    // your acknowledge back to the testbench --ready for next operation
+
   logic[ 4:0]  exp;					    // floating point exponent
   logic[15:0]  int1;				    // input value
   logic        sgn; 				    // floating point sgn
   logic        trap;                    // max neg or 0 input
   bit  [ 1:0]  pgm;                     // counts 1, 2, 3 program
 // port connections to dummy data_mem
-  bit     [7:0]  DataAddr;		    // pointer
-  bit            ReadMem;			
+  bit     [7:0]  DataAddr;		    // pointer	
   bit            MemWrite;				// write enable
   bit     [7:0]  DataIn;				// data input port 
   wire    [7:0]  DataOut;				// data output port
 
-  datamem       dmem(.*);	  		// dummy data_memory for compatibility
+    datamem dmem(
+        .clk(~clk),
+        .MemWrite(MemWrite),
+        .DataAddr(DataAddr),
+        .DataIn(DataIn),
+        .DataOut(DataOut)
+    );
 
   always @(posedge clk) begin
 	if(reset) begin 
@@ -36,7 +40,7 @@ module TopLevel0 (
         done    = 1'b0;
     end
 
-	else if(!done) begin
+	if(!done) begin
         if (sgn)
             int1 = ~int1 + 16'h0001;
         else
@@ -56,16 +60,12 @@ module TopLevel0 (
             if (exp < 5'd16)
                 int1 = int1 >> (21 - exp);
             else
-                int1 = int1 >> 4;
+                int1 = {2'b0,int1[13:0]>>4};
         end
 
-             #10ns{dmem.dm[3],dmem.dm[2]} = {sgn, exp, int1[9:0]};
-             #20000ns done = '1;                  
+             #10 {dmem.dm[3],dmem.dm[2]} = {sgn, exp, int1[9:0]};
+             #10 done = '1;                 
     end
   end
 
 endmodule
-
-
-
-    
